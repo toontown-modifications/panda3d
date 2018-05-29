@@ -2601,7 +2601,6 @@ write_module_class(ostream &out, Object *obj) {
       // compare_to function, which is mapped to the tp_compare slot, which
       // Python 3 no longer has.  So, we'll write code to fall back to that if
       // no matching comparison operator was found.
-      out << "#if PY_MAJOR_VERSION >= 3\n";
       out << "  // All is not lost; we still have the compare_to function to fall back onto.\n";
       out << "  int cmpval = " << slots["tp_compare"]._wrapper_name << "(self, arg);\n";
       out << "  if (cmpval == -1 && _PyErr_OCCURRED()) {\n";
@@ -2625,7 +2624,6 @@ write_module_class(ostream &out, Object *obj) {
       out << "  case Py_GE:\n";
       out << "    return PyBool_FromLong(cmpval >= 0);\n";
       out << "  }\n";
-      out << "#endif\n\n";
     }
 
     out << "  Py_INCREF(Py_NotImplemented);\n";
@@ -5414,6 +5412,18 @@ write_function_instance(ostream &out, FunctionRemap *remap,
         parameter_list += ", &" + param_name;
       }
 
+      // If the default value is NULL, we also accept a None value.
+      bool maybe_none = false;
+      if (default_value != nullptr && (return_flags & RF_coerced) == 0) {
+        CPPExpression::Result res = param->get_default_value()->evaluate();
+        if (res._type == CPPExpression::RT_integer ||
+            res._type == CPPExpression::RT_pointer) {
+          if (res.as_integer() == 0) {
+            maybe_none = true;
+          }
+        }
+      }
+
       string class_name = obj_type->get_local_name(&parser);
 
       // need to a forward scope for this class..
@@ -5464,17 +5474,27 @@ write_function_instance(ostream &out, FunctionRemap *remap,
 
           type->output_instance(extra_convert, param_name + "_this", &parser);
 
-          if (is_optional) {
+          if (is_optional && maybe_none) {
+            extra_convert
+              << default_expr << ";\n"
+              << "if (" << param_name << " != NULL && " << param_name << " != Py_None) {\n"
+              << "  " << param_name << "_this";
+          } else if (is_optional) {
             extra_convert
               << default_expr << ";\n"
               << "if (" << param_name << " != NULL) {\n"
+              << "  " << param_name << "_this";
+          } else if (maybe_none) {
+            extra_convert
+              << " = NULL;\n"
+              << "if (" << param_name << " != Py_None) {\n"
               << "  " << param_name << "_this";
           }
 
           extra_convert << " = Dtool_Coerce_" + make_safe_name(class_name) +
             "(" + param_name + ", " + param_name + "_local);\n";
 
-          if (is_optional) {
+          if (is_optional || maybe_none) {
             extra_convert << "}\n";
           }
 
@@ -5485,8 +5505,12 @@ write_function_instance(ostream &out, FunctionRemap *remap,
 
         if (report_errors) {
           // We were asked to report any errors.  Let's do it.
-          if (is_optional) {
+          if (is_optional && maybe_none) {
+            extra_convert << "if (" << param_name << " != NULL && " << param_name << " != Py_None && !" << coerce_call << ") {\n";
+          } else if (is_optional) {
             extra_convert << "if (" << param_name << " != NULL && !" << coerce_call << ") {\n";
+          } else if (maybe_none) {
+            extra_convert << "if (" << param_name << " != Py_None && !" << coerce_call << ") {\n";
           } else {
             extra_convert << "if (!" << coerce_call << ") {\n";
           }
@@ -5509,19 +5533,35 @@ write_function_instance(ostream &out, FunctionRemap *remap,
           }
           extra_convert << "}\n";
 
+        } else if (is_optional && maybe_none) {
+          extra_param_check << " && (" << param_name << " == NULL || " << param_name << " == Py_None || " << coerce_call << ")";
+
         } else if (is_optional) {
           extra_param_check << " && (" << param_name << " == NULL || " << coerce_call << ")";
+
+        } else if (maybe_none) {
+          extra_param_check << " && (" << param_name << " == Py_None || " << coerce_call << ")";
 
         } else {
           extra_param_check << " && " << coerce_call;
         }
 
-      } else {
+      } else { // The regular, non-coercion case.
         type->output_instance(extra_convert, param_name + "_this", &parser);
-        if (is_optional) {
+        if (is_optional && maybe_none) {
           extra_convert
             << default_expr << ";\n"
-            << "if (" << param_name << " != (PyObject *)NULL) {\n"
+            << "if (" << param_name << " != NULL && " << param_name << " != Py_None) {\n"
+            << "  " << param_name << "_this";
+        } else if (is_optional) {
+          extra_convert
+            << default_expr << ";\n"
+            << "if (" << param_name << " != NULL) {\n"
+            << "  " << param_name << "_this";
+        } else if (maybe_none) {
+          extra_convert
+            << " = NULL;\n"
+            << "if (" << param_name << " != Py_None) {\n"
             << "  " << param_name << "_this";
         }
         if (const_ok && !report_errors) {
@@ -5529,7 +5569,7 @@ write_function_instance(ostream &out, FunctionRemap *remap,
           // simpler.  But maybe we should just reorganize these functions
           // entirely?
           extra_convert << " = NULL;\n";
-          int indent_level = is_optional ? 2 : 0;
+          int indent_level = (is_optional || maybe_none) ? 2 : 0;
           indent(extra_convert, indent_level)
             << "DtoolInstance_GetPointer(" << param_name
             << ", " << param_name << "_this"
@@ -5545,9 +5585,15 @@ write_function_instance(ostream &out, FunctionRemap *remap,
             << "\", " << const_ok << ", " << report_errors << ");\n";
         }
 
-        if (is_optional) {
+        if (is_optional && maybe_none) {
+          extra_convert << "}\n";
+          extra_param_check << " && (" << param_name << " == NULL || " << param_name << " == Py_None || " << param_name << "_this != NULL)";
+        } else if (is_optional) {
           extra_convert << "}\n";
           extra_param_check << " && (" << param_name << " == NULL || " << param_name << "_this != NULL)";
+        } else if (maybe_none) {
+          extra_convert << "}\n";
+          extra_param_check << " && (" << param_name << " == Py_None || " << param_name << "_this != NULL)";
         } else {
           extra_param_check << " && " << param_name << "_this != NULL";
         }

@@ -315,9 +315,7 @@ def parseopts(args):
         usage("Invalid SHA-1 hash given for --git-commit option!")
 
     if GetTarget() == 'windows':
-        show_warning = False
         if not MSVC_VERSION:
-            show_warning = True
             print("No MSVC version specified. Defaulting to 14 (Visual Studio 2015).")
             MSVC_VERSION = (14, 0)
         else:
@@ -325,22 +323,19 @@ def parseopts(args):
                 MSVC_VERSION = tuple(int(d) for d in MSVC_VERSION.split('.'))[:2]
                 if (len(MSVC_VERSION) == 1):
                     MSVC_VERSION += (0,)
-                if MSVC_VERSION < (14, 0):
-                    show_warning = True
             except:
                 usage("Invalid setting for --msvc-version")
 
-        if show_warning:
-            warn_prefix = "%sWARNING:%s " % (GetColor("red"), GetColor())
+        if MSVC_VERSION < (14, 0):
+            warn_prefix = "%sERROR:%s " % (GetColor("red"), GetColor())
             print("=========================================================================")
-            print(warn_prefix + "Support for MSVC versions before 2015 will soon be discontinued.")
-            print(warn_prefix + "If you wish to keep using MSVC 2010, make your voice heard at:")
+            print(warn_prefix + "Support for MSVC versions before 2015 has been discontinued.")
+            print(warn_prefix + "For more information, or any questions, please visit:")
             print(warn_prefix + "  https://github.com/panda3d/panda3d/issues/288")
-            if MSVC_VERSION >= (14, 0):
-                print(warn_prefix + "To squelch this warning, pass --msvc-version {0}.{1}".format(*MSVC_VERSION))
             print("=========================================================================")
             sys.stdout.flush()
             time.sleep(1.0)
+            sys.exit(1)
 
         if not WINDOWS_SDK:
             print("No Windows SDK version specified. Defaulting to '7.1'.")
@@ -552,6 +547,7 @@ if (COMPILER == "MSVC"):
     PkgDisable("EGL")
     PkgDisable("CARBON")
     PkgDisable("COCOA")
+    DefSymbol("FLEX", "YY_NO_UNISTD_H")
     if (PkgSkip("PYTHON")==0):
         IncDirectory("ALWAYS", SDK["PYTHON"] + "/include")
         LibDirectory("ALWAYS", SDK["PYTHON"] + "/libs")
@@ -827,7 +823,7 @@ if (COMPILER=="GCC"):
         SmartPkgEnable("EIGEN",     "eigen3",    (), ("Eigen/Dense",), target_pkg = 'ALWAYS')
         SmartPkgEnable("ARTOOLKIT", "",          ("AR"), "AR/ar.h")
         SmartPkgEnable("FCOLLADA",  "",          ChooseLib(fcollada_libs, "FCOLLADA"), ("FCollada", "FCollada/FCollada.h"))
-        SmartPkgEnable("ASSIMP",    "assimp", ("assimp"), "assimp")
+        SmartPkgEnable("ASSIMP",    "",          ("assimp"), "assimp")
         SmartPkgEnable("FFMPEG",    ffmpeg_libs, ffmpeg_libs, ("libavformat/avformat.h", "libavcodec/avcodec.h", "libavutil/avutil.h"))
         SmartPkgEnable("SWSCALE",   "libswscale", "libswscale", ("libswscale/swscale.h"), target_pkg = "FFMPEG", thirdparty_dir = "ffmpeg")
         SmartPkgEnable("SWRESAMPLE","libswresample", "libswresample", ("libswresample/swresample.h"), target_pkg = "FFMPEG", thirdparty_dir = "ffmpeg")
@@ -1396,7 +1392,7 @@ def CompileBison(wobj, wsrc, opts):
         CopyFile(wdsth, GetOutputDir()+"/tmp/"+ifile+".h")
 
     # Finally, compile the generated source file.
-    CompileCxx(wobj,wdstc,opts)
+    CompileCxx(wobj, wdstc, opts + ["FLEX"])
 
 ########################################################################
 ##
@@ -2271,12 +2267,10 @@ DTOOL_CONFIG=[
     ("DO_PIPELINING",                  '1',                      '1'),
     ("DEFAULT_PATHSEP",                '";"',                    '":"'),
     ("WORDS_BIGENDIAN",                'UNDEF',                  'UNDEF'),
-    ("HAVE_NAMESPACE",                 '1',                      '1'),
     ("HAVE_OPEN_MASK",                 'UNDEF',                  'UNDEF'),
-    ("HAVE_LOCKF",                     '1',                      '1'),
+    ("PHAVE_LOCKF",                    '1',                      '1'),
     ("HAVE_WCHAR_T",                   '1',                      '1'),
     ("HAVE_WSTRING",                   '1',                      '1'),
-    ("HAVE_TYPENAME",                  '1',                      '1'),
     ("SIMPLE_STRUCT_POINTERS",         '1',                      'UNDEF'),
     ("HAVE_DINKUM",                    'UNDEF',                  'UNDEF'),
     ("HAVE_STL_HASH",                  'UNDEF',                  'UNDEF'),
@@ -2451,7 +2445,7 @@ def WriteConfigSettings():
         # Android does have RTTI, but we disable it anyway.
         dtool_config["HAVE_RTTI"] = 'UNDEF'
         dtool_config["PHAVE_GLOB_H"] = 'UNDEF'
-        dtool_config["HAVE_LOCKF"] = 'UNDEF'
+        dtool_config["PHAVE_LOCKF"] = 'UNDEF'
         dtool_config["HAVE_VIDEO4LINUX"] = 'UNDEF'
 
     if (GetOptimize() <= 2 and GetTarget() == "windows"):
@@ -2612,18 +2606,21 @@ PANDAVERSION_H_RUNTIME="""
 
 CHECKPANDAVERSION_CXX="""
 # include "dtoolbase.h"
-EXPCL_DTOOL_DTOOLUTIL int panda_version_$VERSION1_$VERSION2 = 0;
+EXPCL_DTOOL_DTOOLBASE int panda_version_$VERSION1_$VERSION2 = 0;
 """
 
 CHECKPANDAVERSION_H="""
+# ifndef CHECKPANDAVERSION_H
+# define CHECKPANDAVERSION_H
 # include "dtoolbase.h"
-extern EXPCL_DTOOL_DTOOLUTIL int panda_version_$VERSION1_$VERSION2;
-# ifndef WIN32
-/* For Windows, exporting the symbol from the DLL is sufficient; the
-      DLL will not load unless all expected public symbols are defined.
-      Other systems may not mind if the symbol is absent unless we
-      explictly write code that references it. */
-static int check_panda_version = panda_version_$VERSION1_$VERSION2;
+extern EXPCL_DTOOL_DTOOLBASE int panda_version_$VERSION1_$VERSION2;
+// Hack to forcibly depend on the check
+template<typename T>
+class CheckPandaVersion {
+public:
+  int check_version() { return panda_version_$VERSION1_$VERSION2; }
+};
+template class CheckPandaVersion<void>;
 # endif
 """
 
@@ -3667,6 +3664,7 @@ if (not RUNTIME):
   OPTS=['DIR:panda/src/putil', 'ZLIB', 'PYTHON']
   IGATEFILES=GetDirectoryContents('panda/src/putil', ["*.h", "*_composite*.cxx"])
   IGATEFILES.remove("test_bam.h")
+  IGATEFILES.remove("config_util.h")
   TargetAdd('libp3putil.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libp3putil.in', opts=['IMOD:panda3d.core', 'ILIB:libp3putil', 'SRCDIR:panda/src/putil'])
   TargetAdd('libp3putil_igate.obj', input='libp3putil.in', opts=["DEPENDENCYONLY"])
@@ -3793,6 +3791,7 @@ if (not RUNTIME):
 
   OPTS=['DIR:panda/src/pstatclient', 'PYTHON']
   IGATEFILES=GetDirectoryContents('panda/src/pstatclient', ["*.h", "*_composite*.cxx"])
+  IGATEFILES.remove("config_pstats.h")
   TargetAdd('libp3pstatclient.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libp3pstatclient.in', opts=['IMOD:panda3d.core', 'ILIB:libp3pstatclient', 'SRCDIR:panda/src/pstatclient'])
   TargetAdd('libp3pstatclient_igate.obj', input='libp3pstatclient.in', opts=["DEPENDENCYONLY"])
@@ -6109,9 +6108,9 @@ if not PkgSkip("PANDATOOL"):
   TargetAdd('pfm-trans.exe', opts=['ADVAPI'])
 
   TargetAdd('pfm-bba_pfmBba.obj', opts=OPTS, input='pfmBba.cxx')
-  TargetAdd('pfm-bba_config_pfm.obj', opts=OPTS, input='config_pfm.cxx')
+  TargetAdd('pfm-bba_config_pfmprogs.obj', opts=OPTS, input='config_pfmprogs.cxx')
   TargetAdd('pfm-bba.exe', input='pfm-bba_pfmBba.obj')
-  TargetAdd('pfm-bba.exe', input='pfm-bba_config_pfm.obj')
+  TargetAdd('pfm-bba.exe', input='pfm-bba_config_pfmprogs.obj')
   TargetAdd('pfm-bba.exe', input='libp3progbase.lib')
   TargetAdd('pfm-bba.exe', input='libp3pandatoolbase.lib')
   TargetAdd('pfm-bba.exe', input=COMMON_PANDA_LIBS)

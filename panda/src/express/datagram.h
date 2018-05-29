@@ -39,16 +39,13 @@ class EXPCL_PANDAEXPRESS Datagram : public TypedObject {
 PUBLISHED:
   INLINE Datagram();
   INLINE Datagram(const void *data, size_t size);
-  INLINE Datagram(const string &data);
-  INLINE Datagram(const Datagram &copy);
-  INLINE void operator = (const Datagram &copy);
-
-#ifdef USE_MOVE_SEMANTICS
-  INLINE Datagram(Datagram &&from) NOEXCEPT;
-  INLINE void operator = (Datagram &&from) NOEXCEPT;
-#endif
-
+  INLINE explicit Datagram(vector_uchar data);
+  Datagram(const Datagram &copy) = default;
+  Datagram(Datagram &&from) noexcept = default;
   virtual ~Datagram();
+
+  Datagram &operator = (const Datagram &copy) = default;
+  Datagram &operator = (Datagram &&from) noexcept = default;
 
   virtual void clear();
   void dump_hex(ostream &out, unsigned int indent=0) const;
@@ -80,17 +77,18 @@ PUBLISHED:
 
   INLINE void add_string(const string &str);
   INLINE void add_string32(const string &str);
-  INLINE void add_z_string(string str);
+  INLINE void add_z_string(const string &str);
   INLINE void add_fixed_string(const string &str, size_t size);
   void add_wstring(const wstring &str);
 
   void pad_bytes(size_t size);
   void append_data(const void *data, size_t size);
-  INLINE void append_data(const string &data);
+  INLINE void append_data(const vector_uchar &data);
 
   void assign(const void *data, size_t size);
 
   INLINE string get_message() const;
+  INLINE vector_uchar __bytes__() const;
   INLINE const void *get_data() const;
   INLINE size_t get_length() const;
 

@@ -40,6 +40,16 @@ ReferenceCountedVector(const Element *begin, const Element *end, TypeHandle type
 }
 
 /**
+ * Creates an array that takes its elements from the given vector.
+ */
+template<class Element>
+INLINE ReferenceCountedVector<Element>::
+ReferenceCountedVector(pvector<Element> &&from) :
+  pvector<Element>(move(from))
+{
+}
+
+/**
  *
  */
 template<class Element>
@@ -122,17 +132,15 @@ PointerToArrayBase(const PointerToArrayBase<Element> &copy) :
 {
 }
 
-#ifdef USE_MOVE_SEMANTICS
 /**
  *
  */
 template<class Element>
 INLINE PointerToArrayBase<Element>::
-PointerToArrayBase(PointerToArrayBase<Element> &&from) NOEXCEPT :
+PointerToArrayBase(PointerToArrayBase<Element> &&from) noexcept :
   PointerToBase<ReferenceCountedVector<Element> >(move(from))
 {
 }
-#endif  // USE_MOVE_SEMANTICS
 
 /**
  *
