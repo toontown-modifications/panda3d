@@ -21,7 +21,7 @@ LightReMutexDirect()
 #endif
 {
 #ifndef HAVE_REMUTEXIMPL
-  _locking_thread = NULL;
+  _locking_thread = nullptr;
   _lock_count = 0;
 #endif
 }
@@ -143,7 +143,7 @@ debug_is_locked() const {
  * The mutex name is only defined when compiling in DEBUG_THREADS mode.
  */
 INLINE void LightReMutexDirect::
-set_name(const string &) {
+set_name(const std::string &) {
 }
 
 /**
@@ -164,7 +164,7 @@ has_name() const {
 /**
  * The mutex name is only defined when compiling in DEBUG_THREADS mode.
  */
-INLINE string LightReMutexDirect::
+INLINE std::string LightReMutexDirect::
 get_name() const {
-  return string();
+  return std::string();
 }

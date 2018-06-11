@@ -34,17 +34,17 @@ class EXPCL_PANDAAI AIWorld {
     AICharPool _ai_char_pool;
     NodePath _render;
   public:
-    vector<NodePath> _obstacles;
+    std::vector<NodePath> _obstacles;
     typedef std::vector<Flock*> FlockPool;
     FlockPool _flock_pool;
-    void remove_ai_char_from_flock(string name);
+    void remove_ai_char_from_flock(std::string name);
 
 PUBLISHED:
     AIWorld(NodePath render);
     ~AIWorld();
 
     void add_ai_char(AICharacter *ai_ch);
-    void remove_ai_char(string name);
+    void remove_ai_char(std::string name);
 
     void add_flock(Flock *flock);
     void flock_off(unsigned int flock_id);

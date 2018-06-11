@@ -13,6 +13,7 @@
 
 #include "configPageManager.h"
 #include "configDeclaration.h"
+#include "configVariableBool.h"
 #include "configVariableString.h"
 #include "configPage.h"
 #include "prcKeyRegistry.h"
@@ -37,7 +38,7 @@
 #include <algorithm>
 #include <ctype.h>
 
-ConfigPageManager *ConfigPageManager::_global_ptr = NULL;
+ConfigPageManager *ConfigPageManager::_global_ptr = nullptr;
 
 /**
  * The constructor is private (actually, just protected, but only to avoid a
@@ -500,7 +501,7 @@ write(ostream &out) const {
  */
 ConfigPageManager *ConfigPageManager::
 get_global_ptr() {
-  if (_global_ptr == (ConfigPageManager *)NULL) {
+  if (_global_ptr == nullptr) {
     _global_ptr = new ConfigPageManager;
   }
   return _global_ptr;

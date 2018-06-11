@@ -15,36 +15,6 @@ template<class BMType>
 TypeHandle DoubleBitMask<BMType>::_type_handle;
 
 /**
- *
- */
-template<class BMType>
-INLINE DoubleBitMask<BMType>::
-DoubleBitMask() {
-}
-
-/**
- *
- */
-template<class BMType>
-INLINE DoubleBitMask<BMType>::
-DoubleBitMask(const DoubleBitMask<BMType> &copy) :
-  _lo(copy._lo),
-  _hi(copy._hi)
-{
-}
-
-/**
- *
- */
-template<class BMType>
-INLINE DoubleBitMask<BMType> &DoubleBitMask<BMType>::
-operator = (const DoubleBitMask<BMType> &copy) {
-  _lo = copy._lo;
-  _hi = copy._hi;
-  return *this;
-}
-
-/**
  * Returns a DoubleBitMask whose bits are all on.
  */
 template<class BMType>
@@ -109,14 +79,6 @@ range(int low_bit, int size) {
   DoubleBitMask<BMType> result;
   result.set_range(low_bit, size);
   return result;
-}
-
-/**
- *
- */
-template<class BMType>
-INLINE DoubleBitMask<BMType>::
-~DoubleBitMask() {
 }
 
 /**
@@ -205,7 +167,7 @@ is_all_on() const {
  * DoubleBitMask, shifted to the least-significant position.
  */
 template<class BMType>
-INLINE TYPENAME DoubleBitMask<BMType>::WordType DoubleBitMask<BMType>::
+INLINE typename DoubleBitMask<BMType>::WordType DoubleBitMask<BMType>::
 extract(int low_bit, int size) const {
   if (low_bit >= half_bits) {
     return _hi.extract(low_bit - half_bits, size);
@@ -480,7 +442,7 @@ clear() {
  */
 template<class BMType>
 void DoubleBitMask<BMType>::
-output(ostream &out) const {
+output(std::ostream &out) const {
   output_hex(out);
 }
 
@@ -490,7 +452,7 @@ output(ostream &out) const {
  */
 template<class BMType>
 void DoubleBitMask<BMType>::
-output_binary(ostream &out, int spaces_every) const {
+output_binary(std::ostream &out, int spaces_every) const {
   _hi.output_binary(out);
   out << ' ';
   _lo.output_binary(out);
@@ -502,7 +464,7 @@ output_binary(ostream &out, int spaces_every) const {
  */
 template<class BMType>
 void DoubleBitMask<BMType>::
-output_hex(ostream &out, int spaces_every) const {
+output_hex(std::ostream &out, int spaces_every) const {
   _hi.output_hex(out);
   out << ' ';
   _lo.output_hex(out);
@@ -514,7 +476,7 @@ output_hex(ostream &out, int spaces_every) const {
  */
 template<class BMType>
 void DoubleBitMask<BMType>::
-write(ostream &out, int indent_level) const {
+write(std::ostream &out, int indent_level) const {
   indent(out, indent_level) << *this << "\n";
 }
 
@@ -701,7 +663,7 @@ generate_hash(ChecksumHashGenerator &hashgen) const {
 template<class BMType>
 void DoubleBitMask<BMType>::
 init_type() {
-  ostringstream str;
+  std::ostringstream str;
   str << "DoubleBitMask" << num_bits;
   register_type(_type_handle, str.str());
 }

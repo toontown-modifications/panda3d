@@ -306,7 +306,7 @@ set_cull_callback(CallbackObject *object) {
  */
 INLINE void DisplayRegion::
 clear_cull_callback() {
-  set_cull_callback(NULL);
+  set_cull_callback(nullptr);
 }
 
 /**
@@ -354,7 +354,7 @@ set_draw_callback(CallbackObject *object) {
  */
 INLINE void DisplayRegion::
 clear_draw_callback() {
-  set_draw_callback(NULL);
+  set_draw_callback(nullptr);
 }
 
 /**
@@ -479,8 +479,8 @@ INLINE void DisplayRegion::
 set_cull_result(PT(CullResult) cull_result, PT(SceneSetup) scene_setup,
                 Thread *current_thread) {
   CDCullWriter cdata(_cycler_cull, true, current_thread);
-  cdata->_cull_result = move(cull_result);
-  cdata->_scene_setup = move(scene_setup);
+  cdata->_cull_result = std::move(cull_result);
+  cdata->_scene_setup = std::move(scene_setup);
 }
 
 /**
@@ -581,8 +581,8 @@ INLINE DisplayRegionPipelineReader::
   _object->_cycler.release_read(_cdata);
 
 #ifdef _DEBUG
-  _object = NULL;
-  _cdata = NULL;
+  _object = nullptr;
+  _cdata = nullptr;
 #endif  // _DEBUG
 }
 
@@ -863,8 +863,8 @@ get_pixel_height(int i) const {
   return _cdata->_regions[i]._pixels[3] - _cdata->_regions[i]._pixels[2];
 }
 
-INLINE ostream &
-operator << (ostream &out, const DisplayRegion &dr) {
+INLINE std::ostream &
+operator << (std::ostream &out, const DisplayRegion &dr) {
   dr.output(out);
   return out;
 }

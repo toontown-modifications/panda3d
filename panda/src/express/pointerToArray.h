@@ -91,7 +91,7 @@ public:
   // subset of this class.  So we define just the exportable interface here.
 #ifdef CPPPARSER
 PUBLISHED:
-  typedef TYPENAME pvector<Element>::size_type size_type;
+  typedef typename pvector<Element>::size_type size_type;
   INLINE PointerToArray(TypeHandle type_handle = get_type_handle(Element));
   INLINE static PointerToArray<Element> empty_array(size_type n, TypeHandle type_handle = get_type_handle(Element));
   INLINE PointerToArray(const PointerToArray<Element> &copy);
@@ -110,7 +110,7 @@ PUBLISHED:
   EXTENSION(PyObject *get_data() const);
   EXTENSION(void set_data(PyObject *data));
   EXTENSION(PyObject *get_subdata(size_type n, size_type count) const);
-  INLINE void set_subdata(size_type n, size_type count, const string &data);
+  INLINE void set_subdata(size_type n, size_type count, const std::string &data);
   INLINE int get_ref_count() const;
   INLINE int get_node_ref_count() const;
 
@@ -123,16 +123,16 @@ PUBLISHED:
 
 #else  // CPPPARSER
   // This is the actual, complete interface.
-  typedef TYPENAME PointerToArrayBase<Element>::To To;
-  typedef TYPENAME pvector<Element>::value_type value_type;
-  typedef TYPENAME pvector<Element>::reference reference;
-  typedef TYPENAME pvector<Element>::const_reference const_reference;
-  typedef TYPENAME pvector<Element>::iterator iterator;
-  typedef TYPENAME pvector<Element>::const_iterator const_iterator;
-  typedef TYPENAME pvector<Element>::reverse_iterator reverse_iterator;
-  typedef TYPENAME pvector<Element>::const_reverse_iterator const_reverse_iterator;
-  typedef TYPENAME pvector<Element>::difference_type difference_type;
-  typedef TYPENAME pvector<Element>::size_type size_type;
+  typedef typename PointerToArrayBase<Element>::To To;
+  typedef typename pvector<Element>::value_type value_type;
+  typedef typename pvector<Element>::reference reference;
+  typedef typename pvector<Element>::const_reference const_reference;
+  typedef typename pvector<Element>::iterator iterator;
+  typedef typename pvector<Element>::const_iterator const_iterator;
+  typedef typename pvector<Element>::reverse_iterator reverse_iterator;
+  typedef typename pvector<Element>::const_reverse_iterator const_reverse_iterator;
+  typedef typename pvector<Element>::difference_type difference_type;
+  typedef typename pvector<Element>::size_type size_type;
 
 public:
   INLINE PointerToArray(TypeHandle type_handle = get_type_handle(Element));
@@ -150,8 +150,8 @@ public:
 
   INLINE iterator begin() const;
   INLINE iterator end() const;
-  INLINE TYPENAME PointerToArray<Element>::reverse_iterator rbegin() const;
-  INLINE TYPENAME PointerToArray<Element>::reverse_iterator rend() const;
+  INLINE typename PointerToArray<Element>::reverse_iterator rbegin() const;
+  INLINE typename PointerToArray<Element>::reverse_iterator rend() const;
 
   // Equality and comparison operators are pointerwise for PointerToArrays,
   // not elementwise as in vector.
@@ -196,10 +196,10 @@ public:
   // Methods to help out Python and other high-level languages.
   INLINE const Element &get_element(size_type n) const;
   INLINE void set_element(size_type n, const Element &value);
-  INLINE string get_data() const;
-  INLINE void set_data(const string &data);
-  INLINE string get_subdata(size_type n, size_type count) const;
-  INLINE void set_subdata(size_type n, size_type count, const string &data);
+  INLINE std::string get_data() const;
+  INLINE void set_data(const std::string &data);
+  INLINE std::string get_subdata(size_type n, size_type count) const;
+  INLINE void set_subdata(size_type n, size_type count, const std::string &data);
 
   // These functions are only to be used in Reading through BamReader.  They
   // are designed to work in pairs, so that you register what is returned by
@@ -261,7 +261,7 @@ PUBLISHED:
 
   INLINE void clear();
 
-  typedef TYPENAME pvector<Element>::size_type size_type;
+  typedef typename pvector<Element>::size_type size_type;
   INLINE size_type size() const;
   INLINE const Element &get_element(size_type n) const;
   EXTENSION(const Element &__getitem__(size_type n) const);
@@ -279,21 +279,21 @@ PUBLISHED:
 
 #else  // CPPPARSER
   // This is the actual, complete interface.
-  typedef TYPENAME PointerToArrayBase<Element>::To To;
-  typedef TYPENAME pvector<Element>::value_type value_type;
-  typedef TYPENAME pvector<Element>::const_reference reference;
-  typedef TYPENAME pvector<Element>::const_reference const_reference;
-  typedef TYPENAME pvector<Element>::const_iterator iterator;
-  typedef TYPENAME pvector<Element>::const_iterator const_iterator;
+  typedef typename PointerToArrayBase<Element>::To To;
+  typedef typename pvector<Element>::value_type value_type;
+  typedef typename pvector<Element>::const_reference reference;
+  typedef typename pvector<Element>::const_reference const_reference;
+  typedef typename pvector<Element>::const_iterator iterator;
+  typedef typename pvector<Element>::const_iterator const_iterator;
 #if defined(WIN32_VC) || defined(WIN64_VC)
   // VC++ seems to break the const_reverse_iterator definition somehow.
-  typedef TYPENAME pvector<Element>::reverse_iterator reverse_iterator;
+  typedef typename pvector<Element>::reverse_iterator reverse_iterator;
 #else
-  typedef TYPENAME pvector<Element>::const_reverse_iterator reverse_iterator;
+  typedef typename pvector<Element>::const_reverse_iterator reverse_iterator;
 #endif
-  typedef TYPENAME pvector<Element>::const_reverse_iterator const_reverse_iterator;
-  typedef TYPENAME pvector<Element>::difference_type difference_type;
-  typedef TYPENAME pvector<Element>::size_type size_type;
+  typedef typename pvector<Element>::const_reverse_iterator const_reverse_iterator;
+  typedef typename pvector<Element>::difference_type difference_type;
+  typedef typename pvector<Element>::size_type size_type;
 
   INLINE ConstPointerToArray(const Element *begin, const Element *end, TypeHandle type_handle = get_type_handle(Element));
   INLINE ConstPointerToArray(const PointerToArray<Element> &copy);
@@ -306,8 +306,8 @@ PUBLISHED:
 
   INLINE iterator begin() const;
   INLINE iterator end() const;
-  INLINE TYPENAME ConstPointerToArray<Element>::reverse_iterator rbegin() const;
-  INLINE TYPENAME ConstPointerToArray<Element>::reverse_iterator rend() const;
+  INLINE typename ConstPointerToArray<Element>::reverse_iterator rbegin() const;
+  INLINE typename ConstPointerToArray<Element>::reverse_iterator rend() const;
 
   // Equality and comparison operators are pointerwise for PointerToArrays,
   // not elementwise as in vector.
@@ -336,8 +336,8 @@ PUBLISHED:
 
   // Methods to help out Python and other high-level languages.
   INLINE const Element &get_element(size_type n) const;
-  INLINE string get_data() const;
-  INLINE string get_subdata(size_type n, size_type count) const;
+  INLINE std::string get_data() const;
+  INLINE std::string get_subdata(size_type n, size_type count) const;
 
   INLINE int get_ref_count() const;
   INLINE void ref() const;

@@ -59,7 +59,7 @@ is_regular_file(const Filename &file) const {
  */
 bool VirtualFileMountMultifile::
 read_file(const Filename &file, bool do_uncompress,
-          pvector<unsigned char> &result) const {
+          vector_uchar &result) const {
   if (do_uncompress) {
     // If the file is to be decompressed, we'd better just use the higher-
     // level implementation, which includes support for on-the-fly
@@ -89,7 +89,7 @@ istream *VirtualFileMountMultifile::
 open_read_file(const Filename &file) const {
   int subfile_index = _multifile->find_subfile(file);
   if (subfile_index < 0) {
-    return NULL;
+    return nullptr;
   }
 
   // The caller will eventually pass this pointer to

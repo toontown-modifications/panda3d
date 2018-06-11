@@ -108,8 +108,8 @@ scan_directory() const {
   // Copy the set of nested mount points to a sorted list so we can search it
   // quickly.
   ov_set<string> mount_points;
-  copy(mount_points_flat.begin(), mount_points_flat.end(),
-       back_inserter(mount_points));
+  std::copy(mount_points_flat.begin(), mount_points_flat.end(),
+            std::back_inserter(mount_points));
   mount_points.sort();
 
 
@@ -130,7 +130,7 @@ scan_directory() const {
   if (!scan_local_directory(file_list, mount_points)) {
     // Not a directory, or unable to read directory.
     if (file_list->get_num_files() == 0) {
-      return NULL;
+      return nullptr;
     }
 
     // We couldn't read the physical directory, but we do have some mounted
@@ -155,7 +155,7 @@ output(ostream &out) const {
 void VirtualFile::
 ls(ostream &out) const {
   CPT(VirtualFileList) contents = scan_directory();
-  if (contents == (VirtualFileList *)NULL) {
+  if (contents == nullptr) {
     if (!is_directory()) {
       out << get_filename() << "\n";
     } else {
@@ -191,7 +191,7 @@ ls_all(ostream &out) const {
  */
 istream *VirtualFile::
 open_read_file(bool auto_unwrap) const {
-  return NULL;
+  return nullptr;
 }
 
 /**
@@ -224,7 +224,7 @@ was_read_successful() const {
  */
 ostream *VirtualFile::
 open_write_file(bool auto_wrap, bool truncate) {
-  return NULL;
+  return nullptr;
 }
 
 /**
@@ -234,7 +234,7 @@ open_write_file(bool auto_wrap, bool truncate) {
  */
 ostream *VirtualFile::
 open_append_file() {
-  return NULL;
+  return nullptr;
 }
 
 /**
@@ -255,7 +255,7 @@ close_write_file(ostream *stream) {
  */
 iostream *VirtualFile::
 open_read_write_file(bool truncate) {
-  return NULL;
+  return nullptr;
 }
 
 /**
@@ -265,7 +265,7 @@ open_read_write_file(bool truncate) {
  */
 iostream *VirtualFile::
 open_read_append_file() {
-  return NULL;
+  return nullptr;
 }
 
 /**
@@ -351,7 +351,7 @@ bool VirtualFile::
 read_file(string &result, bool auto_unwrap) const {
   result = string();
 
-  pvector<unsigned char> pv;
+  vector_uchar pv;
   if (!read_file(pv, auto_unwrap)) {
     return false;
   }
@@ -368,7 +368,7 @@ read_file(string &result, bool auto_unwrap) const {
  * regular file.  Returns true on success, false otherwise.
  */
 bool VirtualFile::
-read_file(pvector<unsigned char> &result, bool auto_unwrap) const {
+read_file(vector_uchar &result, bool auto_unwrap) const {
   return false;
 }
 
@@ -387,7 +387,7 @@ write_file(const unsigned char *data, size_t data_size, bool auto_wrap) {
  * entry, the data read from the file will be appended onto it.
  */
 bool VirtualFile::
-simple_read_file(istream *in, pvector<unsigned char> &result) {
+simple_read_file(istream *in, vector_uchar &result) {
   static const size_t buffer_size = 4096;
   char buffer[buffer_size];
 
@@ -408,7 +408,7 @@ simple_read_file(istream *in, pvector<unsigned char> &result) {
  * max_bytes bytes from the file.
  */
 bool VirtualFile::
-simple_read_file(istream *in, pvector<unsigned char> &result, size_t max_bytes) {
+simple_read_file(istream *in, vector_uchar &result, size_t max_bytes) {
   static const size_t buffer_size = 4096;
   char buffer[buffer_size];
 
@@ -443,7 +443,7 @@ scan_local_directory(VirtualFileList *, const ov_set<string> &) const {
 void VirtualFile::
 r_ls_all(ostream &out, const Filename &root) const {
   CPT(VirtualFileList) contents = scan_directory();
-  if (contents == (VirtualFileList *)NULL) {
+  if (contents == nullptr) {
     return;
   }
 

@@ -35,7 +35,7 @@ PointerTo(const PointerTo<T> &copy) :
 template<class T>
 INLINE PointerTo<T>::
 PointerTo(PointerTo<T> &&from) noexcept :
-  PointerToBase<T>(move(from))
+  PointerToBase<T>(std::move(from))
 {
 }
 
@@ -45,7 +45,7 @@ PointerTo(PointerTo<T> &&from) noexcept :
 template<class T>
 INLINE PointerTo<T> &PointerTo<T>::
 operator = (PointerTo<T> &&from) noexcept {
-  this->reassign(move(from));
+  this->reassign(std::move(from));
   return *this;
 }
 
@@ -53,7 +53,7 @@ operator = (PointerTo<T> &&from) noexcept {
  *
  */
 template<class T>
-constexpr TYPENAME PointerTo<T>::To &PointerTo<T>::
+constexpr typename PointerTo<T>::To &PointerTo<T>::
 operator *() const noexcept {
   return *((To *)(this->_void_ptr));
 }
@@ -62,7 +62,7 @@ operator *() const noexcept {
  *
  */
 template<class T>
-constexpr TYPENAME PointerTo<T>::To *PointerTo<T>::
+constexpr typename PointerTo<T>::To *PointerTo<T>::
 operator -> () const noexcept {
   return (To *)(this->_void_ptr);
 }
@@ -97,7 +97,7 @@ cheat() {
  * compiler problems, particularly for implicit upcasts.
  */
 template<class T>
-constexpr TYPENAME PointerTo<T>::To *PointerTo<T>::
+constexpr typename PointerTo<T>::To *PointerTo<T>::
 p() const noexcept {
   return (To *)(this->_void_ptr);
 }
@@ -127,8 +127,8 @@ operator = (const PointerTo<T> &copy) {
  */
 template<class T>
 ALWAYS_INLINE ConstPointerTo<T>::
-ConstPointerTo(const TYPENAME ConstPointerTo<T>::To *ptr) noexcept :
-  PointerToBase<T>((TYPENAME ConstPointerTo<T>::To *)ptr)
+ConstPointerTo(const typename ConstPointerTo<T>::To *ptr) noexcept :
+  PointerToBase<T>((typename ConstPointerTo<T>::To *)ptr)
 {
 }
 
@@ -158,7 +158,7 @@ ConstPointerTo(const ConstPointerTo<T> &copy) :
 template<class T>
 INLINE ConstPointerTo<T>::
 ConstPointerTo(PointerTo<T> &&from) noexcept :
-  PointerToBase<T>(move(from))
+  PointerToBase<T>(std::move(from))
 {
 }
 
@@ -168,7 +168,7 @@ ConstPointerTo(PointerTo<T> &&from) noexcept :
 template<class T>
 INLINE ConstPointerTo<T>::
 ConstPointerTo(ConstPointerTo<T> &&from) noexcept :
-  PointerToBase<T>(move(from))
+  PointerToBase<T>(std::move(from))
 {
 }
 
@@ -178,7 +178,7 @@ ConstPointerTo(ConstPointerTo<T> &&from) noexcept :
 template<class T>
 INLINE ConstPointerTo<T> &ConstPointerTo<T>::
 operator = (PointerTo<T> &&from) noexcept {
-  this->reassign(move(from));
+  this->reassign(std::move(from));
   return *this;
 }
 
@@ -188,7 +188,7 @@ operator = (PointerTo<T> &&from) noexcept {
 template<class T>
 INLINE ConstPointerTo<T> &ConstPointerTo<T>::
 operator = (ConstPointerTo<T> &&from) noexcept {
-  this->reassign(move(from));
+  this->reassign(std::move(from));
   return *this;
 }
 
@@ -196,7 +196,7 @@ operator = (ConstPointerTo<T> &&from) noexcept {
  *
  */
 template<class T>
-constexpr const TYPENAME ConstPointerTo<T>::To &ConstPointerTo<T>::
+constexpr const typename ConstPointerTo<T>::To &ConstPointerTo<T>::
 operator *() const noexcept {
   return *((To *)(this->_void_ptr));
 }
@@ -205,7 +205,7 @@ operator *() const noexcept {
  *
  */
 template<class T>
-constexpr const TYPENAME ConstPointerTo<T>::To *ConstPointerTo<T>::
+constexpr const typename ConstPointerTo<T>::To *ConstPointerTo<T>::
 operator -> () const noexcept {
   return (To *)(this->_void_ptr);
 }
@@ -240,7 +240,7 @@ cheat() {
  * around compiler problems, particularly for implicit upcasts.
  */
 template<class T>
-constexpr const TYPENAME ConstPointerTo<T>::To *ConstPointerTo<T>::
+constexpr const typename ConstPointerTo<T>::To *ConstPointerTo<T>::
 p() const noexcept {
   return (To *)(this->_void_ptr);
 }

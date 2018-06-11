@@ -40,7 +40,7 @@ public:
     _data = data;
   }
   ALWAYS_INLINE void set_data(Value &&data) {
-    _data = move(data);
+    _data = std::move(data);
   }
 
 private:
@@ -52,16 +52,16 @@ private:
  * values.  This allows effectively using SimpleHashMap as a set.
  */
 template<class Key>
-class SimpleKeyValuePair<Key, nullptr_t> {
+class SimpleKeyValuePair<Key, std::nullptr_t> {
 public:
-  INLINE SimpleKeyValuePair(const Key &key, nullptr_t data) :
+  INLINE SimpleKeyValuePair(const Key &key, std::nullptr_t data) :
     _key(key) {}
 
   Key _key;
 
-  ALWAYS_INLINE constexpr static nullptr_t get_data() { return nullptr; }
-  ALWAYS_INLINE constexpr static nullptr_t modify_data() { return nullptr; }
-  ALWAYS_INLINE static void set_data(nullptr_t) {}
+  ALWAYS_INLINE constexpr static std::nullptr_t get_data() { return nullptr; }
+  ALWAYS_INLINE constexpr static std::nullptr_t modify_data() { return nullptr; }
+  ALWAYS_INLINE static void set_data(std::nullptr_t) {}
 };
 
 /**
@@ -77,7 +77,7 @@ public:
  *
  * It can also be used as a set, by using nullptr_t as Value typename.
  */
-template<class Key, class Value, class Compare = method_hash<Key, less<Key> > >
+template<class Key, class Value, class Compare = method_hash<Key, std::less<Key> > >
 class SimpleHashMap {
   // Per-entry overhead is determined by sizeof(int) * sparsity.  Should be a
   // power of two.
@@ -113,8 +113,8 @@ public:
   INLINE size_t get_num_entries() const;
   INLINE bool is_empty() const;
 
-  void output(ostream &out) const;
-  void write(ostream &out) const;
+  void output(std::ostream &out) const;
+  void write(std::ostream &out) const;
   bool validate() const;
 
   INLINE bool consider_shrink_table();
@@ -145,7 +145,7 @@ public:
 };
 
 template<class Key, class Value, class Compare>
-inline ostream &operator << (ostream &out, const SimpleHashMap<Key, Value, Compare> &shm) {
+inline std::ostream &operator << (std::ostream &out, const SimpleHashMap<Key, Value, Compare> &shm) {
   shm.output(out);
   return out;
 }

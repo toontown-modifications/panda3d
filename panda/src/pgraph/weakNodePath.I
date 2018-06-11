@@ -79,7 +79,7 @@ operator bool () const {
  */
 INLINE bool WeakNodePath::
 is_empty() const {
-  return _head == (NodePathComponent *)NULL || _head.was_deleted();
+  return _head == nullptr || _head.was_deleted();
 }
 
 /**
@@ -88,7 +88,7 @@ is_empty() const {
  */
 INLINE bool WeakNodePath::
 was_deleted() const {
-  return _head != (NodePathComponent *)NULL && _head.was_deleted();
+  return _head != nullptr && _head.was_deleted();
 }
 
 /**
@@ -221,7 +221,7 @@ get_key() const {
   return _backup_key;
 }
 
-INLINE ostream &operator << (ostream &out, const WeakNodePath &node_path) {
+INLINE std::ostream &operator << (std::ostream &out, const WeakNodePath &node_path) {
   node_path.output(out);
   return out;
 }
