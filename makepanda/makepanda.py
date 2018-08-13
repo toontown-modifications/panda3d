@@ -15,9 +15,11 @@ try:
         import queue
     else:
         import Queue as queue
+except KeyboardInterrupt:
+    raise
 except:
     print("You are either using an incomplete or an old version of Python!")
-    print("Please install the development package of Python 2.x and try again.")
+    print("Please install the development package of Python and try again.")
     exit(1)
 
 from makepandacore import *
@@ -1348,6 +1350,9 @@ def CompileCxx(obj,src,opts):
         if optlevel == 3:
             # Fast math is nice, but we'd like to see NaN in dev builds.
             cmd += " -fno-finite-math-only"
+
+        # Make sure this is off to avoid GCC/Eigen bug (see GitHub #228)
+        cmd += " -fno-unsafe-math-optimizations"
 
         if (optlevel==1): cmd += " -ggdb -D_DEBUG"
         if (optlevel==2): cmd += " -O1 -D_DEBUG"
