@@ -683,7 +683,7 @@ if (COMPILER == "MSVC"):
         path = GetThirdpartyDir() + "assimp/lib/IrrXML.lib"
         if os.path.isfile(path):
             LibName("ASSIMP", GetThirdpartyDir() + "assimp/lib/IrrXML.lib")
-        IncDirectory("ASSIMP", GetThirdpartyDir() + "assimp/include/assimp")
+        IncDirectory("ASSIMP", GetThirdpartyDir() + "assimp/include")
     if (PkgSkip("SQUISH")==0):
         if GetOptimize() <= 2:
             LibName("SQUISH",   GetThirdpartyDir() + "squish/lib/squishd.lib")
@@ -828,7 +828,7 @@ if (COMPILER=="GCC"):
         SmartPkgEnable("EIGEN",     "eigen3",    (), ("Eigen/Dense",), target_pkg = 'ALWAYS')
         SmartPkgEnable("ARTOOLKIT", "",          ("AR"), "AR/ar.h")
         SmartPkgEnable("FCOLLADA",  "",          ChooseLib(fcollada_libs, "FCOLLADA"), ("FCollada", "FCollada/FCollada.h"))
-        SmartPkgEnable("ASSIMP",    "",          ("assimp"), "assimp")
+        SmartPkgEnable("ASSIMP",    "",          ("assimp"), "assimp/Importer.hpp")
         SmartPkgEnable("FFMPEG",    ffmpeg_libs, ffmpeg_libs, ("libavformat/avformat.h", "libavcodec/avcodec.h", "libavutil/avutil.h"))
         SmartPkgEnable("SWSCALE",   "libswscale", "libswscale", ("libswscale/swscale.h"), target_pkg = "FFMPEG", thirdparty_dir = "ffmpeg")
         SmartPkgEnable("SWRESAMPLE","libswresample", "libswresample", ("libswresample/swresample.h"), target_pkg = "FFMPEG", thirdparty_dir = "ffmpeg")
@@ -3875,9 +3875,7 @@ if (not RUNTIME):
   IGATEFILES.remove("renderBuffer.h")
   TargetAdd('libp3display.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libp3display.in', opts=['IMOD:panda3d.core', 'ILIB:libp3display', 'SRCDIR:panda/src/display'])
-  PyTargetAdd('p3display_graphicsStateGuardian_ext.obj', opts=OPTS, input='graphicsStateGuardian_ext.cxx')
-  PyTargetAdd('p3display_graphicsWindow_ext.obj', opts=OPTS, input='graphicsWindow_ext.cxx')
-  PyTargetAdd('p3display_pythonGraphicsWindowProc.obj', opts=OPTS, input='pythonGraphicsWindowProc.cxx')
+  PyTargetAdd('p3display_ext_composite.obj', opts=OPTS, input='p3display_ext_composite.cxx')
 
   if RTDIST and GetTarget() == 'darwin':
     OPTS=['DIR:panda/src/display']
@@ -4277,9 +4275,7 @@ if (not RUNTIME):
   PyTargetAdd('core.pyd', input='p3event_pythonTask.obj')
   PyTargetAdd('core.pyd', input='p3gobj_ext_composite.obj')
   PyTargetAdd('core.pyd', input='p3pgraph_ext_composite.obj')
-  PyTargetAdd('core.pyd', input='p3display_graphicsStateGuardian_ext.obj')
-  PyTargetAdd('core.pyd', input='p3display_graphicsWindow_ext.obj')
-  PyTargetAdd('core.pyd', input='p3display_pythonGraphicsWindowProc.obj')
+  PyTargetAdd('core.pyd', input='p3display_ext_composite.obj')
 
   PyTargetAdd('core.pyd', input='core_module.obj')
   if not GetLinkAllStatic() and GetTarget() != 'emscripten':
@@ -4862,7 +4858,6 @@ if (PkgSkip("ODE")==0 and not RUNTIME):
   OPTS=['DIR:panda/src/ode', 'ODE']
   IGATEFILES=GetDirectoryContents('panda/src/ode', ["*.h", "*_composite*.cxx"])
   IGATEFILES.remove("odeConvexGeom.h")
-  IGATEFILES.remove("odeHeightFieldGeom.h")
   IGATEFILES.remove("odeHelperStructs.h")
   TargetAdd('libpandaode.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libpandaode.in', opts=['IMOD:panda3d.ode', 'ILIB:libpandaode', 'SRCDIR:panda/src/ode'])
