@@ -31,6 +31,10 @@
 
 #include <algorithm>
 
+using std::istream;
+using std::ostream;
+using std::string;
+
 TypeHandle PartBundle::_type_handle;
 
 
@@ -150,10 +154,11 @@ apply_transform(const TransformState *transform) {
 
   AppliedTransforms::iterator ati = _applied_transforms.find(transform);
   if (ati != _applied_transforms.end()) {
-    if ((*ati).first.is_valid_pointer() &&
-        (*ati).second.is_valid_pointer()) {
-      // Here's our cached result.
-      return (*ati).second.lock();
+    if ((*ati).first.is_valid_pointer()) {
+      if (auto new_bundle = (*ati).second.lock()) {
+        // Here's our cached result.
+        return new_bundle;
+      }
     }
   }
 
@@ -551,8 +556,15 @@ control_removed(AnimControl *control) {
     CDStageWriter cdata(_cycler, pipeline_stage);
     ChannelBlend::iterator cbi = cdata->_blend.find(control);
     if (cbi != cdata->_blend.end()) {
+      cdata->_net_blend -= cbi->second;
       cdata->_blend.erase(cbi);
       cdata->_anim_changed = true;
+
+      // We need to make sure that any _effective_channel pointers that point
+      // to this control are cleared.
+      if (pipeline_stage == 0) {
+        determine_effective_channels(cdata);
+      }
     }
   }
   CLOSE_ITERATE_ALL_STAGES(_cycler);

@@ -23,6 +23,66 @@ TypeHandle DXGeomMunger9::_type_handle;
  *
  */
 DXGeomMunger9::
+DXGeomMunger9(GraphicsStateGuardian *gsg, const RenderState *state) :
+  StandardMunger(gsg, state, 1, NT_packed_dabc, C_color),
+  _texture(nullptr),
+  _tex_gen(nullptr)
+{
+  const TextureAttrib *texture = nullptr;
+  const TexGenAttrib *tex_gen = nullptr;
+  state->get_attrib(texture);
+  state->get_attrib(tex_gen);
+  _texture = texture;
+  _tex_gen = tex_gen;
+
+  if (!gsg->get_color_scale_via_lighting()) {
+    // We might need to munge the colors, if we are overriding the vertex
+    // colors and the GSG can't cheat the color via lighting.
+
+    const ColorAttrib *color_attrib;
+    const ShaderAttrib *shader_attrib;
+    state->get_attrib_def(shader_attrib);
+
+    if (!shader_attrib->auto_shader() &&
+        shader_attrib->get_shader() == nullptr &&
+        state->get_attrib(color_attrib) &&
+        color_attrib->get_color_type() != ColorAttrib::T_vertex) {
+
+      if (color_attrib->get_color_type() == ColorAttrib::T_off) {
+        _color.set(1, 1, 1, 1);
+      } else {
+        _color = color_attrib->get_color();
+      }
+
+      const ColorScaleAttrib *color_scale_attrib;
+      if (state->get_attrib(color_scale_attrib) &&
+          color_scale_attrib->has_scale()) {
+        _color.componentwise_mult(color_scale_attrib->get_scale());
+      }
+      _munge_color = true;
+      _should_munge_state = true;
+    }
+  }
+
+  _filtered_texture = nullptr;
+  _reffed_filtered_texture = false;
+  if (texture != nullptr) {
+    _filtered_texture = texture->filter_to_max(gsg->get_max_texture_stages());
+    if (_filtered_texture != texture) {
+      _filtered_texture->ref();
+      _reffed_filtered_texture = true;
+    }
+  }
+  // Set a callback to unregister ourselves when either the Texture or the
+  // TexGen object gets deleted.
+  _texture.add_callback(this);
+  _tex_gen.add_callback(this);
+}
+
+/**
+ *
+ */
+DXGeomMunger9::
 ~DXGeomMunger9() {
   if (_reffed_filtered_texture) {
     unref_delete(_filtered_texture);
@@ -140,7 +200,7 @@ munge_format_impl(const GeomVertexFormat *orig,
       int tc_index = _filtered_texture->get_ff_tc_index(si);
       nassertr(tc_index < num_stages, orig);
       ff_tc_index[tc_index] = si;
-      max_tc_index = max(tc_index, max_tc_index);
+      max_tc_index = std::max(tc_index, max_tc_index);
     }
 
     // Now walk through the texture coordinates in the order they will appear
@@ -243,7 +303,7 @@ premunge_format_impl(const GeomVertexFormat *orig) {
       int tc_index = _filtered_texture->get_ff_tc_index(si);
       nassertr(tc_index < num_stages, orig);
       ff_tc_index[tc_index] = si;
-      max_tc_index = max(tc_index, max_tc_index);
+      max_tc_index = std::max(tc_index, max_tc_index);
     }
 
     // Now walk through the texture coordinates in the order they will appear
@@ -300,8 +360,11 @@ compare_to_impl(const GeomMunger *other) const {
   if (_filtered_texture != om->_filtered_texture) {
     return _filtered_texture < om->_filtered_texture ? -1 : 1;
   }
-  if (_tex_gen != om->_tex_gen) {
-    return _tex_gen < om->_tex_gen ? -1 : 1;
+  if (_tex_gen.owner_before(om->_tex_gen)) {
+    return -1;
+  }
+  if (om->_tex_gen.owner_before(_tex_gen)) {
+    return 1;
   }
 
   return StandardMunger::compare_to_impl(other);
@@ -321,8 +384,11 @@ geom_compare_to_impl(const GeomMunger *other) const {
   if (_filtered_texture != om->_filtered_texture) {
     return _filtered_texture < om->_filtered_texture ? -1 : 1;
   }
-  if (_tex_gen != om->_tex_gen) {
-    return _tex_gen < om->_tex_gen ? -1 : 1;
+  if (_tex_gen.owner_before(om->_tex_gen)) {
+    return -1;
+  }
+  if (om->_tex_gen.owner_before(_tex_gen)) {
+    return 1;
   }
 
   return StandardMunger::geom_compare_to_impl(other);

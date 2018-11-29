@@ -1,11 +1,4 @@
 /**
- * PANDA 3D SOFTWARE
- * Copyright (c) Carnegie Mellon University.  All rights reserved.
- *
- * All use of this software is subject to the terms of the revised BSD
- * license.  You should have received a copy of this license along
- * with this source code in a file named "LICENSE."
- *
  * @file py_panda.cxx
  * @author drose
  * @date 2005-07-04
@@ -17,6 +10,8 @@
 
 #ifdef HAVE_PYTHON
 
+using std::string;
+
 PyMemberDef standard_type_members[] = {
   {(char *)"this", (sizeof(void*) == sizeof(int)) ? T_UINT : T_ULONGLONG, offsetof(Dtool_PyInstDef, _ptr_to_object), READONLY, (char *)"C++ 'this' pointer, if any"},
   {(char *)"this_ownership", T_BOOL, offsetof(Dtool_PyInstDef, _memory_rules), READONLY, (char *)"C++ 'this' ownership rules"},
@@ -26,10 +21,6 @@ PyMemberDef standard_type_members[] = {
   {(char *)"this_metatype", T_OBJECT, offsetof(Dtool_PyInstDef, _My_Type), READONLY, (char *)"The dtool meta object"},
   {nullptr}  /* Sentinel */
 };
-
-static RuntimeTypeMap runtime_type_map;
-static RuntimeTypeSet runtime_type_set;
-static NamedTypeMap named_type_map;
 
 /**
 
@@ -143,13 +134,6 @@ DTOOL_Call_GetPointerThisClass(PyObject *self, Dtool_PyTypedObject *classdef,
   return nullptr;
 }
 
-void *DTOOL_Call_GetPointerThis(PyObject *self) {
-  if (self != nullptr && DtoolInstance_Check(self)) {
-    return DtoolInstance_VOID_PTR(self);
-  }
-  return nullptr;
-}
-
 /**
  * This is similar to a PyErr_Occurred() check, except that it also checks
  * Notify to see if an assertion has occurred.  If that is the case, then it
@@ -240,8 +224,8 @@ PyObject *Dtool_Raise_AttributeError(PyObject *obj, const char *attribute) {
     "'%.100s' object has no attribute '%.200s'",
     Py_TYPE(obj)->tp_name, attribute);
 
-  Py_INCREF(PyExc_TypeError);
-  PyErr_Restore(PyExc_TypeError, message, nullptr);
+  Py_INCREF(PyExc_AttributeError);
+  PyErr_Restore(PyExc_AttributeError, message, nullptr);
   return nullptr;
 }
 
@@ -311,11 +295,39 @@ PyObject *_Dtool_Return(PyObject *value) {
   return value;
 }
 
+#if PY_VERSION_HEX < 0x03040000
+static PyObject *Dtool_EnumType_Str(PyObject *self) {
+  PyObject *name = PyObject_GetAttrString(self, "name");
+#if PY_MAJOR_VERSION >= 3
+  PyObject *repr = PyUnicode_FromFormat("%s.%s", Py_TYPE(self)->tp_name, PyString_AS_STRING(name));
+#else
+  PyObject *repr = PyString_FromFormat("%s.%s", Py_TYPE(self)->tp_name, PyString_AS_STRING(name));
+#endif
+  Py_DECREF(name);
+  return repr;
+}
+
+static PyObject *Dtool_EnumType_Repr(PyObject *self) {
+  PyObject *name = PyObject_GetAttrString(self, "name");
+  PyObject *value = PyObject_GetAttrString(self, "value");
+#if PY_MAJOR_VERSION >= 3
+  PyObject *repr = PyUnicode_FromFormat("<%s.%s: %ld>", Py_TYPE(self)->tp_name, PyString_AS_STRING(name), PyLongOrInt_AS_LONG(value));
+#else
+  PyObject *repr = PyString_FromFormat("<%s.%s: %ld>", Py_TYPE(self)->tp_name, PyString_AS_STRING(name), PyLongOrInt_AS_LONG(value));
+#endif
+  Py_DECREF(name);
+  Py_DECREF(value);
+  return repr;
+}
+#endif
+
 /**
- * Creates a Python 3.4-style enum type.  Steals reference to 'names'.
+ * Creates a Python 3.4-style enum type.  Steals reference to 'names', which
+ * should be a tuple of (name, value) pairs.
  */
-PyObject *Dtool_EnumType_Create(const char *name, PyObject *names, const char *module) {
+PyTypeObject *Dtool_EnumType_Create(const char *name, PyObject *names, const char *module) {
   static PyObject *enum_class = nullptr;
+#if PY_VERSION_HEX >= 0x03040000
   static PyObject *enum_meta = nullptr;
   static PyObject *enum_create = nullptr;
   if (enum_meta == nullptr) {
@@ -330,12 +342,69 @@ PyObject *Dtool_EnumType_Create(const char *name, PyObject *names, const char *m
 
   PyObject *result = PyObject_CallFunction(enum_create, (char *)"OsN", enum_class, name, names);
   nassertr(result != nullptr, nullptr);
+#else
+  static PyObject *name_str;
+  static PyObject *name_sunder_str;
+  static PyObject *value_str;
+  static PyObject *value_sunder_str;
+  // Emulate something vaguely like the enum module.
+  if (enum_class == nullptr) {
+#if PY_MAJOR_VERSION >= 3
+    name_str = PyUnicode_InternFromString("name");
+    value_str = PyUnicode_InternFromString("value");
+    name_sunder_str = PyUnicode_InternFromString("_name_");
+    value_sunder_str = PyUnicode_InternFromString("_value_");
+#else
+    name_str = PyString_InternFromString("name");
+    value_str = PyString_InternFromString("value");
+    name_sunder_str = PyString_InternFromString("_name_");
+    value_sunder_str = PyString_InternFromString("_value_");
+#endif
+    PyObject *name_value_tuple = PyTuple_New(4);
+    PyTuple_SET_ITEM(name_value_tuple, 0, name_str);
+    PyTuple_SET_ITEM(name_value_tuple, 1, value_str);
+    PyTuple_SET_ITEM(name_value_tuple, 2, name_sunder_str);
+    PyTuple_SET_ITEM(name_value_tuple, 3, value_sunder_str);
+    Py_INCREF(name_str);
+    Py_INCREF(value_str);
+
+    PyObject *slots_dict = PyDict_New();
+    PyDict_SetItemString(slots_dict, "__slots__", name_value_tuple);
+    Py_DECREF(name_value_tuple);
+
+    enum_class = PyObject_CallFunction((PyObject *)&PyType_Type, (char *)"s()N", "Enum", slots_dict);
+    nassertr(enum_class != nullptr, nullptr);
+  }
+  PyObject *result = PyObject_CallFunction((PyObject *)&PyType_Type, (char *)"s(O)N", name, enum_class, PyDict_New());
+  nassertr(result != nullptr, nullptr);
+
+  ((PyTypeObject *)result)->tp_str = Dtool_EnumType_Str;
+  ((PyTypeObject *)result)->tp_repr = Dtool_EnumType_Repr;
+
+  // Copy the names as instances of the above to the class dict.
+  Py_ssize_t size = PyTuple_GET_SIZE(names);
+  for (Py_ssize_t i = 0; i < size; ++i) {
+    PyObject *item = PyTuple_GET_ITEM(names, i);
+    PyObject *name = PyTuple_GET_ITEM(item, 0);
+    PyObject *value = PyTuple_GET_ITEM(item, 1);
+    PyObject *member = _PyObject_CallNoArg(result);
+    PyObject_SetAttr(member, name_str, name);
+    PyObject_SetAttr(member, name_sunder_str, name);
+    PyObject_SetAttr(member, value_str, value);
+    PyObject_SetAttr(member, value_sunder_str, value);
+    PyObject_SetAttr(result, name, member);
+    Py_DECREF(member);
+  }
+  Py_DECREF(names);
+#endif
+
   if (module != nullptr) {
     PyObject *modstr = PyUnicode_FromString(module);
     PyObject_SetAttrString(result, "__module__", modstr);
     Py_DECREF(modstr);
   }
-  return result;
+  nassertr(PyType_Check(result), nullptr);
+  return (PyTypeObject *)result;
 }
 
 /**
@@ -351,7 +420,7 @@ PyObject *DTool_CreatePyInstanceTyped(void *local_this_in, Dtool_PyTypedObject &
   // IF the class is possibly a run time typed object
   if (type_index > 0) {
     // get best fit class...
-    Dtool_PyTypedObject *target_class = Dtool_RuntimeTypeDtoolType(type_index);
+    Dtool_PyTypedObject *target_class = (Dtool_PyTypedObject *)TypeHandle::from_index(type_index).get_python_type();
     if (target_class != nullptr) {
       // cast to the type...
       void *new_local_this = target_class->_Dtool_DowncastInterface(local_this_in, &known_class_type);
@@ -404,132 +473,26 @@ PyObject *DTool_CreatePyInstance(void *local_this, Dtool_PyTypedObject &in_class
   return (PyObject *)self;
 }
 
-// Th Finalizer for simple instances..
-int DTool_PyInit_Finalize(PyObject *self, void *local_this, Dtool_PyTypedObject *type, bool memory_rules, bool is_const) {
-  // lets put some code in here that checks to see the memory is properly
-  // configured.. prior to my call ..
-
-  ((Dtool_PyInstDef *)self)->_My_Type = type;
-  ((Dtool_PyInstDef *)self)->_ptr_to_object = local_this;
-  ((Dtool_PyInstDef *)self)->_memory_rules = memory_rules;
-  ((Dtool_PyInstDef *)self)->_is_const = is_const;
-  return 0;
-}
-
-// A helper function to glue method definition together .. that can not be
-// done at code generation time because of multiple generation passes in
-// interrogate..
-void Dtool_Accum_MethDefs(PyMethodDef in[], MethodDefmap &themap) {
-  for (; in->ml_name != nullptr; in++) {
-    if (themap.find(in->ml_name) == themap.end()) {
-      themap[in->ml_name] = in;
-    }
-  }
-}
-
-// ** HACK ** alert.. Need to keep a runtime type dictionary ... that is
-// forward declared of typed object.  We rely on the fact that typed objects
-// are uniquly defined by an integer.
-void
-RegisterNamedClass(const string &name, Dtool_PyTypedObject &otype) {
-  pair<NamedTypeMap::iterator, bool> result =
-    named_type_map.insert(NamedTypeMap::value_type(name, &otype));
-
-  if (!result.second) {
-    // There was already a class with this name in the dictionary.
-    interrogatedb_cat.warning()
-      << "Double definition for class " << name << "\n";
-  }
-}
-
-void
-RegisterRuntimeTypedClass(Dtool_PyTypedObject &otype) {
-  int type_index = otype._type.get_index();
-
-  if (type_index == 0) {
-    interrogatedb_cat.warning()
-      << "Class " << otype._PyType.tp_name
-      << " has a zero TypeHandle value; check that init_type() is called.\n";
-
-  } else if (type_index < 0 || type_index >= TypeRegistry::ptr()->get_num_typehandles()) {
-    interrogatedb_cat.warning()
-      << "Class " << otype._PyType.tp_name
-      << " has an illegal TypeHandle value; check that init_type() is called.\n";
-
+/**
+ * Returns a borrowed reference to the global type dictionary.
+ */
+Dtool_TypeMap *Dtool_GetGlobalTypeMap() {
+  PyObject *capsule = PySys_GetObject((char *)"_interrogate_types");
+  if (capsule != nullptr) {
+    return (Dtool_TypeMap *)PyCapsule_GetPointer(capsule, nullptr);
   } else {
-    pair<RuntimeTypeMap::iterator, bool> result =
-      runtime_type_map.insert(RuntimeTypeMap::value_type(type_index, &otype));
-    if (!result.second) {
-      // There was already an entry in the dictionary for type_index.
-      Dtool_PyTypedObject *other_type = (*result.first).second;
-      interrogatedb_cat.warning()
-        << "Classes " << otype._PyType.tp_name
-        << " and " << other_type->_PyType.tp_name
-        << " share the same TypeHandle value (" << type_index
-        << "); check class definitions.\n";
-
-    } else {
-      runtime_type_set.insert(type_index);
-    }
+    Dtool_TypeMap *type_map = new Dtool_TypeMap;
+    capsule = PyCapsule_New((void *)type_map, nullptr, nullptr);
+    PySys_SetObject((char *)"_interrogate_types", capsule);
+    Py_DECREF(capsule);
+    return type_map;
   }
-}
-
-Dtool_PyTypedObject *
-LookupNamedClass(const string &name) {
-  NamedTypeMap::const_iterator it;
-  it = named_type_map.find(name);
-
-  if (it == named_type_map.end()) {
-    // Find a type named like this in the type registry.
-    TypeHandle handle = TypeRegistry::ptr()->find_type(name);
-    if (handle.get_index() > 0) {
-      RuntimeTypeMap::const_iterator it2;
-      it2 = runtime_type_map.find(handle.get_index());
-      if (it2 != runtime_type_map.end()) {
-        return it2->second;
-      }
-    }
-
-    interrogatedb_cat.error()
-      << "Attempt to use type " << name << " which has not yet been defined!\n";
-    return nullptr;
-  } else {
-    return it->second;
-  }
-}
-
-Dtool_PyTypedObject *
-LookupRuntimeTypedClass(TypeHandle handle) {
-  RuntimeTypeMap::const_iterator it;
-  it = runtime_type_map.find(handle.get_index());
-
-  if (it == runtime_type_map.end()) {
-    interrogatedb_cat.error()
-      << "Attempt to use type " << handle << " which has not yet been defined!\n";
-    return nullptr;
-  } else {
-    return it->second;
-  }
-}
-
-Dtool_PyTypedObject *Dtool_RuntimeTypeDtoolType(int type) {
-  RuntimeTypeMap::iterator di = runtime_type_map.find(type);
-  if (di != runtime_type_map.end()) {
-    return di->second;
-  } else {
-    int type2 = get_best_parent_from_Set(type, runtime_type_set);
-    di = runtime_type_map.find(type2);
-    if (di != runtime_type_map.end()) {
-      return di->second;
-    }
-  }
-  return nullptr;
 }
 
 #if PY_MAJOR_VERSION >= 3
-PyObject *Dtool_PyModuleInitHelper(LibraryDef *defs[], PyModuleDef *module_def) {
+PyObject *Dtool_PyModuleInitHelper(const LibraryDef *defs[], PyModuleDef *module_def) {
 #else
-PyObject *Dtool_PyModuleInitHelper(LibraryDef *defs[], const char *modulename) {
+PyObject *Dtool_PyModuleInitHelper(const LibraryDef *defs[], const char *modulename) {
 #endif
   // Check the version so we can print a helpful error if it doesn't match.
   string version = Py_GetVersion();
@@ -538,7 +501,7 @@ PyObject *Dtool_PyModuleInitHelper(LibraryDef *defs[], const char *modulename) {
       version[2] != '0' + PY_MINOR_VERSION) {
     // Raise a helpful error message.  We can safely do this because the
     // signature and behavior for PyErr_SetString has remained consistent.
-    ostringstream errs;
+    std::ostringstream errs;
     errs << "this module was compiled for Python "
          << PY_MAJOR_VERSION << "." << PY_MINOR_VERSION << ", which is "
          << "incompatible with Python " << version.substr(0, 3);
@@ -547,59 +510,46 @@ PyObject *Dtool_PyModuleInitHelper(LibraryDef *defs[], const char *modulename) {
     return nullptr;
   }
 
-  // Initialize the types we define in py_panda.
-  static bool dtool_inited = false;
-  if (!dtool_inited) {
-    dtool_inited = true;
-
-    if (PyType_Ready(&Dtool_SequenceWrapper_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_SequenceWrapper)");
-    }
-
-    if (PyType_Ready(&Dtool_MutableSequenceWrapper_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_MutableSequenceWrapper)");
-    }
-
-    if (PyType_Ready(&Dtool_MappingWrapper_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_MappingWrapper)");
-    }
-
-    if (PyType_Ready(&Dtool_MutableMappingWrapper_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_MutableMappingWrapper)");
-    }
-
-    if (PyType_Ready(&Dtool_MappingWrapper_Keys_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_MappingWrapper_Keys)");
-    }
-
-    if (PyType_Ready(&Dtool_MappingWrapper_Values_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_MappingWrapper_Values)");
-    }
-
-    if (PyType_Ready(&Dtool_MappingWrapper_Items_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_MappingWrapper_Items)");
-    }
-
-    if (PyType_Ready(&Dtool_GeneratorWrapper_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_GeneratorWrapper)");
-    }
-
-    if (PyType_Ready(&Dtool_StaticProperty_Type) < 0) {
-      return Dtool_Raise_TypeError("PyType_Ready(Dtool_StaticProperty_Type)");
-    }
-
-#ifdef Py_TRACE_REFS
-    _Py_AddToAllObjects((PyObject *)&Dtool_EmptyTuple, 0);
-#endif
-
-    // Initialize the base class of everything.
-    Dtool_PyModuleClassInit_DTOOL_SUPER_BASE(nullptr);
-  }
+  Dtool_TypeMap *type_map = Dtool_GetGlobalTypeMap();
 
   // the module level function inits....
   MethodDefmap functions;
-  for (int xx = 0; defs[xx] != nullptr; xx++) {
-    Dtool_Accum_MethDefs(defs[xx]->_methods, functions);
+  for (size_t i = 0; defs[i] != nullptr; i++) {
+    const LibraryDef &def = *defs[i];
+
+    // Accumulate method definitions.
+    for (PyMethodDef *meth = def._methods; meth->ml_name != nullptr; meth++) {
+      if (functions.find(meth->ml_name) == functions.end()) {
+        functions[meth->ml_name] = meth;
+      }
+    }
+
+    // Define exported types.
+    const Dtool_TypeDef *types = def._types;
+    if (types != nullptr) {
+      while (types->name != nullptr) {
+        (*type_map)[std::string(types->name)] = types->type;
+        ++types;
+      }
+    }
+  }
+
+  // Resolve external types, in a second pass.
+  for (size_t i = 0; defs[i] != nullptr; i++) {
+    const LibraryDef &def = *defs[i];
+
+    Dtool_TypeDef *types = def._external_types;
+    if (types != nullptr) {
+      while (types->name != nullptr) {
+        auto it = type_map->find(std::string(types->name));
+        if (it != type_map->end()) {
+          types->type = it->second;
+        } else {
+          return PyErr_Format(PyExc_NameError, "name '%s' is not defined", types->name);
+        }
+        ++types;
+      }
+    }
   }
 
   PyMethodDef *newdef = new PyMethodDef[functions.size() + 1];
@@ -646,7 +596,10 @@ PyObject *Dtool_PyModuleInitHelper(LibraryDef *defs[], const char *modulename) {
 
     // Extract the __file__ attribute, if present.
     Filename main_dir;
-    PyObject *file_attr = PyObject_GetAttrString(main_module, "__file__");
+    PyObject *file_attr = nullptr;
+    if (main_module != nullptr) {
+      file_attr = PyObject_GetAttrString(main_module, "__file__");
+    }
     if (file_attr == nullptr) {
       // Must be running in the interactive interpreter.  Use the CWD.
       main_dir = ExecutionEnvironment::get_cwd();
@@ -676,6 +629,11 @@ PyObject *Dtool_PyModuleInitHelper(LibraryDef *defs[], const char *modulename) {
     ExecutionEnvironment::shadow_environment_variable("MAIN_DIR", main_dir.to_os_specific());
     PyErr_Clear();
     initialized_main_dir = true;
+
+    // Also, while we are at it, initialize the thread swap hook.
+#if defined(HAVE_THREADS) && defined(SIMPLE_THREADS)
+    global_thread_state_swap = PyThreadState_Swap;
+#endif
   }
 
   PyModule_AddIntConstant(module, "Dtool_PyNativeInterface", 1);
@@ -734,127 +692,6 @@ PyObject *Dtool_AddToDictionary(PyObject *self1, PyObject *args) {
   return Py_None;
 }
 
-Py_hash_t DTOOL_PyObject_HashPointer(PyObject *self) {
-  if (self != nullptr && DtoolInstance_Check(self)) {
-    return (Py_hash_t)(intptr_t)DtoolInstance_VOID_PTR(self);
-  }
-  return -1;
-}
-
-/* Compare v to w.  Return
-   -1 if v <  w or exception (PyErr_Occurred() true in latter case).
-    0 if v == w.
-    1 if v > w.
-   XXX The docs (C API manual) say the return value is undefined in case
-   XXX of error.
-*/
-
-int DTOOL_PyObject_ComparePointers(PyObject *v1, PyObject *v2) {
-  // try this compare
-  void *v1_this = DTOOL_Call_GetPointerThis(v1);
-  void *v2_this = DTOOL_Call_GetPointerThis(v2);
-  if (v1_this != nullptr && v2_this != nullptr) { // both are our types...
-    if (v1_this < v2_this) {
-      return -1;
-    }
-    if (v1_this > v2_this) {
-      return 1;
-    }
-    return 0;
-  }
-
-  // ok self compare...
-  if (v1 < v2) {
-    return -1;
-  }
-  if (v1 > v2) {
-    return 1;
-  }
-  return 0;
-}
-
-int DTOOL_PyObject_Compare(PyObject *v1, PyObject *v2) {
-  // First try compareTo function..
-  PyObject * func = PyObject_GetAttrString(v1, "compare_to");
-  if (func == nullptr) {
-    PyErr_Clear();
-  } else {
-#if PY_VERSION_HEX >= 0x03060000
-    PyObject *res = _PyObject_FastCall(func, &v2, 1);
-#else
-    PyObject *res = nullptr;
-    PyObject *args = PyTuple_Pack(1, v2);
-    if (args != nullptr) {
-      res = PyObject_Call(func, args, nullptr);
-      Py_DECREF(args);
-    }
-#endif
-    Py_DECREF(func);
-    PyErr_Clear(); // just in case the function threw an error
-    // only use if the function returns an INT... hmm
-    if (res != nullptr) {
-      if (PyLong_Check(res)) {
-        long answer = PyLong_AsLong(res);
-        Py_DECREF(res);
-
-        // Python really wants us to return strictly -1, 0, or 1.
-        if (answer < 0) {
-          return -1;
-        } else if (answer > 0) {
-          return 1;
-        } else {
-          return 0;
-        }
-      }
-#if PY_MAJOR_VERSION < 3
-      else if (PyInt_Check(res)) {
-        long answer = PyInt_AsLong(res);
-        Py_DECREF(res);
-
-        // Python really wants us to return strictly -1, 0, or 1.
-        if (answer < 0) {
-          return -1;
-        } else if (answer > 0) {
-          return 1;
-        } else {
-          return 0;
-        }
-      }
-#endif
-      Py_DECREF(res);
-    }
-  }
-
-  return DTOOL_PyObject_ComparePointers(v1, v2);
-}
-
-PyObject *DTOOL_PyObject_RichCompare(PyObject *v1, PyObject *v2, int op) {
-  int cmpval = DTOOL_PyObject_Compare(v1, v2);
-  bool result;
-  switch (op) {
-  NODEFAULT
-  case Py_LT:
-    result = (cmpval < 0);
-    break;
-  case Py_LE:
-    result = (cmpval <= 0);
-    break;
-  case Py_EQ:
-    result = (cmpval == 0);
-    break;
-  case Py_NE:
-    result = (cmpval != 0);
-    break;
-  case Py_GT:
-    result = (cmpval > 0);
-    break;
-  case Py_GE:
-    result = (cmpval >= 0);
-    break;
-  }
-  return PyBool_FromLong(result);
-}
-
 /**
  * This is a support function for a synthesized __copy__() method from a C++
  * make_copy() method.
@@ -875,15 +712,7 @@ PyObject *copy_from_make_copy(PyObject *self, PyObject *noargs) {
  */
 PyObject *copy_from_copy_constructor(PyObject *self, PyObject *noargs) {
   PyObject *callable = (PyObject *)Py_TYPE(self);
-
-#if PY_VERSION_HEX >= 0x03060000
-  PyObject *result = _PyObject_FastCall(callable, &self, 1);
-#else
-  PyObject *args = PyTuple_Pack(1, self);
-  PyObject *result = PyObject_Call(callable, args, nullptr);
-  Py_DECREF(args);
-#endif
-  return result;
+  return _PyObject_FastCall(callable, &self, 1);
 }
 
 /**

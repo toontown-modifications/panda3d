@@ -50,6 +50,13 @@
 #include <ctype.h>
 #include <algorithm>
 
+using std::cerr;
+using std::istream;
+using std::map;
+using std::ostream;
+using std::ostringstream;
+using std::string;
+
 InterrogateBuilder builder;
 std::string EXPORT_IMPORT_PREFIX;
 
@@ -1382,7 +1389,8 @@ scan_element(CPPInstance *element, CPPStructType *struct_type,
     // We can only generate a getter and a setter if we can talk about the
     // type it is.
 
-    if (parameter_type->as_struct_type() != nullptr) {
+    if (parameter_type->as_struct_type() != nullptr &&
+        !parameter_type->is_trivial()) {
       // Wrap the type in a const reference.
       parameter_type = TypeManager::wrap_const_reference(parameter_type);
     }
@@ -1699,7 +1707,7 @@ get_function(CPPInstance *function, string description,
     ifunction._flags |= flags;
 
     // Also, make sure this particular signature is defined.
-    pair<InterrogateFunction::Instances::iterator, bool> result =
+    std::pair<InterrogateFunction::Instances::iterator, bool> result =
       ifunction._instances->insert(InterrogateFunction::Instances::value_type(function_signature, function));
 
     InterrogateFunction::Instances::iterator ii = result.first;
@@ -2936,7 +2944,7 @@ define_method(CPPInstance *function, InterrogateType &itype,
   // specifically flag get_class_type() as published.
   bool force_publish = false;
   if (function->get_simple_name() == "get_class_type" &&
-      (function->_storage_class && CPPInstance::SC_static) != 0 &&
+      (function->_storage_class & CPPInstance::SC_static) != 0 &&
       function->_vis <= V_public) {
     force_publish = true;
   }

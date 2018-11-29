@@ -12,6 +12,8 @@
  */
 
 #include "eggJointData.h"
+
+#include "eggCharacterDb.h"
 #include "eggJointNodePointer.h"
 #include "eggMatrixTablePointer.h"
 #include "pvector.h"
@@ -21,6 +23,8 @@
 #include "indent.h"
 #include "fftCompressor.h"
 #include "zStream.h"
+
+using std::string;
 
 TypeHandle EggJointData::_type_handle;
 
@@ -259,7 +263,7 @@ score_reparent_to(EggJointData *new_parent, EggCharacterDb &db) {
 #else
   // The FFTCompressor does minimal run-length encoding, but to really get an
   // accurate measure we should zlib-compress the resulting stream.
-  ostringstream sstr;
+  std::ostringstream sstr;
   OCompressStream zstr(&sstr, false);
   zstr.write((const char *)dg.get_data(), dg.get_length());
   zstr.flush();
@@ -442,7 +446,7 @@ add_back_pointer(int model_index, EggObject *egg_object) {
  *
  */
 void EggJointData::
-write(ostream &out, int indent_level) const {
+write(std::ostream &out, int indent_level) const {
   indent(out, indent_level)
     << "Joint " << get_name()
     << " (models:";

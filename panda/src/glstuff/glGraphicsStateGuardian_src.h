@@ -146,6 +146,7 @@ typedef void (APIENTRYP PFNGLBLENDFUNCSEPARATEPROC) (GLenum sfactorRGB, GLenum d
 // GLSL shader functions
 typedef void (APIENTRYP PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
 typedef void (APIENTRYP PFNGLBINDATTRIBLOCATIONPROC) (GLuint program, GLuint index, const GLchar *name);
+typedef void (APIENTRYP PFNGLBINDFRAGDATALOCATIONPROC) (GLuint program, GLuint color, const GLchar *name);
 typedef void (APIENTRYP PFNGLCOMPILESHADERPROC) (GLuint shader);
 typedef GLuint (APIENTRYP PFNGLCREATEPROGRAMPROC) (void);
 typedef GLuint (APIENTRYP PFNGLCREATESHADERPROC) (GLenum type);
@@ -175,6 +176,10 @@ typedef void (APIENTRYP PFNGLUNIFORM1IVPROC) (GLint location, GLsizei count, con
 typedef void (APIENTRYP PFNGLUNIFORM2IVPROC) (GLint location, GLsizei count, const GLint *value);
 typedef void (APIENTRYP PFNGLUNIFORM3IVPROC) (GLint location, GLsizei count, const GLint *value);
 typedef void (APIENTRYP PFNGLUNIFORM4IVPROC) (GLint location, GLsizei count, const GLint *value);
+typedef void (APIENTRYP PFNGLUNIFORM1UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLUNIFORM2UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLUNIFORM3UIVPROC) (GLint location, GLsizei count, const GLuint *value);
+typedef void (APIENTRYP PFNGLUNIFORM4UIVPROC) (GLint location, GLsizei count, const GLuint *value);
 typedef void (APIENTRYP PFNGLUNIFORMMATRIX3FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 typedef void (APIENTRYP PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 typedef void (APIENTRYP PFNGLVALIDATEPROGRAMPROC) (GLuint program);
@@ -270,6 +275,9 @@ public:
   virtual int get_driver_shader_version_minor();
 
   static void APIENTRY debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, GLvoid *userParam);
+
+  INLINE virtual void push_group_marker(const std::string &marker) final;
+  INLINE virtual void pop_group_marker() final;
 
   virtual void reset();
 
@@ -661,7 +669,7 @@ protected:
 
 #ifndef OPENGLES_1
   BitMask32 _enabled_vertex_attrib_arrays;
-  GLint _vertex_attrib_divisors[32];
+  GLuint _vertex_attrib_divisors[32];
 
   PT(Shader) _current_shader;
   ShaderContext *_current_shader_context;
@@ -670,7 +678,7 @@ protected:
   PT(Shader) _texture_binding_shader;
   ShaderContext *_texture_binding_shader_context;
 
-  static PT(Shader) _default_shader;
+  PT(Shader) _default_shader;
 
 #ifndef OPENGLES
   bool _shader_point_size;
@@ -743,6 +751,12 @@ protected:
 #endif
 
 public:
+#ifndef OPENGLES
+  bool _use_depth_zero_to_one;
+  bool _use_remapped_depth_range;
+  PFNGLDEPTHRANGEDNVPROC _glDepthRangedNV;
+#endif
+
   bool _supports_point_parameters;
   PFNGLPOINTPARAMETERFVPROC _glPointParameterfv;
   bool _supports_point_sprite;
@@ -899,6 +913,7 @@ public:
   PFNGLBINDPROGRAMARBPROC _glBindProgram;
 
 #ifndef OPENGLES
+  bool _supports_dsa;
   PFNGLGENERATETEXTUREMIPMAPPROC _glGenerateTextureMipmap;
 #endif
 
@@ -949,6 +964,7 @@ public:
   // GLSL functions
   PFNGLATTACHSHADERPROC _glAttachShader;
   PFNGLBINDATTRIBLOCATIONPROC _glBindAttribLocation;
+  PFNGLBINDFRAGDATALOCATIONPROC _glBindFragDataLocation;
   PFNGLCOMPILESHADERPROC _glCompileShader;
   PFNGLCREATEPROGRAMPROC _glCreateProgram;
   PFNGLCREATESHADERPROC _glCreateShader;
@@ -978,6 +994,10 @@ public:
   PFNGLUNIFORM2IVPROC _glUniform2iv;
   PFNGLUNIFORM3IVPROC _glUniform3iv;
   PFNGLUNIFORM4IVPROC _glUniform4iv;
+  PFNGLUNIFORM1UIVPROC _glUniform1uiv;
+  PFNGLUNIFORM2UIVPROC _glUniform2uiv;
+  PFNGLUNIFORM3UIVPROC _glUniform3uiv;
+  PFNGLUNIFORM4UIVPROC _glUniform4uiv;
   PFNGLUNIFORMMATRIX3FVPROC _glUniformMatrix3fv;
   PFNGLUNIFORMMATRIX4FVPROC _glUniformMatrix4fv;
   PFNGLVALIDATEPROGRAMPROC _glValidateProgram;
@@ -1076,6 +1096,11 @@ public:
   GLuint _white_texture;
 
 #ifndef NDEBUG
+#ifndef OPENGLES_1
+  PFNGLPUSHGROUPMARKEREXTPROC _glPushGroupMarker;
+  PFNGLPOPGROUPMARKEREXTPROC _glPopGroupMarker;
+#endif
+
   bool _show_texture_usage;
   int _show_texture_usage_max_size;
   int _show_texture_usage_index;
@@ -1103,6 +1128,7 @@ public:
   static PStatCollector _texture_update_pcollector;
   static PStatCollector _fbo_bind_pcollector;
   static PStatCollector _check_error_pcollector;
+  static PStatCollector _check_residency_pcollector;
 
 public:
   virtual TypeHandle get_type() const {

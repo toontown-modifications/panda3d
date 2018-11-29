@@ -14,17 +14,16 @@
 #ifndef P3DCERT_WX_H
 #define P3DCERT_WX_H
 
-#include "wx/wx.h"
+#include <wx/wx.h>
 
 #define OPENSSL_NO_KRB5
-#include "openssl/x509.h"
-#include "openssl/x509_vfy.h"
-#include "openssl/pem.h"
+#include <openssl/x509.h>
+#include <openssl/x509_vfy.h>
+#include <openssl/pem.h>
 
 #include <string>
 #include <iostream>
 #include <stdio.h>
-using namespace std;
 
 class ViewCertDialog;
 

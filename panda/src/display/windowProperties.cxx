@@ -15,6 +15,10 @@
 #include "config_display.h"
 #include "nativeWindowHandle.h"
 
+using std::istream;
+using std::ostream;
+using std::string;
+
 WindowProperties *WindowProperties::_default_properties = nullptr;
 
 /**
@@ -131,6 +135,8 @@ clear_default() {
 /**
  * Returns a WindowProperties structure with only the size specified.  The
  * size is the only property that matters to buffers.
+ *
+ * @deprecated in the Python API, use WindowProperties(size=(x, y)) instead.
  */
 WindowProperties WindowProperties::
 size(const LVecBase2i &size) {

@@ -71,6 +71,12 @@
 
 #include "mayaEggLoader.h"
 
+using std::cerr;
+using std::endl;
+using std::ostringstream;
+using std::string;
+using std::vector;
+
 class MayaEggGroup;
 class MayaEggGeom;
 class MayaEggMesh;
@@ -617,7 +623,7 @@ void MayaEggJoint::CreateMayaBone(MayaEggGroup *eggParent)
 
 // MayaEggGeom : base abstract class of MayaEggMesh and MayaEggNurbsSurface
 
-typedef pair<double, EggGroup *> MayaEggWeight;
+typedef std::pair<double, EggGroup *> MayaEggWeight;
 
 struct MayaEggVertex
 {
@@ -831,12 +837,12 @@ int MayaEggGeom::GetVert(EggVertex *vert, EggGroup *context)
 void MayaEggGeom::AssignNames(void)
 {
   string name = _pool->get_name();
-  int nsize = name.size();
-  if ((nsize > 6) && (name.rfind(".verts")==(nsize-6))) {
-    name.resize(nsize-6);
+  size_t nsize = name.size();
+  if (nsize > 6 && name.rfind(".verts") == (nsize - 6)) {
+    name.resize(nsize - 6);
   }
-  if ((nsize > 4) && (name.rfind(".cvs")==(nsize-4))) {
-    name.resize(nsize-4);
+  if (nsize > 4 && name.rfind(".cvs") == (nsize - 4)) {
+    name.resize(nsize - 4);
   }
 
   MFnDependencyNode dnshape(_shapeNode);
@@ -907,7 +913,7 @@ void MayaEggGeom::AddEggFlag(MString fieldName) {
 typedef phash_map<LTexCoordd, int>             TVertTable;
 typedef phash_map<LColor, int>                CVertTable;
 
-class MayaEggMesh : public MayaEggGeom
+class MayaEggMesh final : public MayaEggGeom
 {
 public:
   MColorArray         _faceColorArray;
@@ -931,7 +937,7 @@ public:
   int GetCVert(const LColor &col);
   int AddFace(unsigned numVertices, MIntArray mvertIndices, MIntArray mtvertIndices, MayaEggTex *tex);
 
-  void ConnectTextures(void);
+  void ConnectTextures(void) override;
 };
 
 int MayaEggMesh::GetTVert(const LTexCoordd &uv)
@@ -1364,7 +1370,6 @@ void MayaEggLoader::TraverseEggNode(EggNode *node, EggGroup *context, string del
     int numVertices = 0;
     for (ci = poly->begin(); ci != poly->end(); ++ci) {
       EggVertex *vtx = (*ci);
-      EggVertexPool *pool = poly->get_pool();
       LTexCoordd uv(0,0);
       if (vtx->has_uv()) {
         uv = vtx->get_uv();
@@ -1565,8 +1570,8 @@ void MayaEggLoader::TraverseEggNode(EggNode *node, EggGroup *context, string del
         mayaloader_cat.debug() << delim+delstring << "found an EggTable: " << node->get_name() << endl;
       }
     } else if (node->is_of_type(EggXfmSAnim::get_class_type())) {
-      MayaAnim *anim = GetAnim(DCAST(EggXfmSAnim, node));
-      // anim->PrintData();
+      //MayaAnim *anim = GetAnim(DCAST(EggXfmSAnim, node));
+      //anim->PrintData();
       if (mayaloader_cat.is_debug()) {
         mayaloader_cat.debug() << delim+delstring << "found an EggXfmSAnim: " << node->get_name() << endl;
       }
@@ -1791,7 +1796,7 @@ bool MayaEggLoader::ConvertEggData(EggData *data, bool merge, bool model, bool a
   double thickness = 0.0;
   for (ji = _joint_tab.begin(); ji != _joint_tab.end(); ++ji) {
     MayaEggJoint *joint = (*ji).second;
-    double dfo = ((*ji).second->GetPos()).length();
+    double dfo = (joint->GetPos()).length();
     if (dfo > thickness) {
       thickness = dfo;
     }
@@ -2007,8 +2012,7 @@ void MayaEggLoader::PrintData(MayaEggMesh *mesh)
 
 void MayaEggLoader::ParseFrameInfo(string comment)
 {
-  int length = 0;
-  int pos, ls, le;
+  size_t pos, ls, le;
 
   pos = comment.find("-fri");
   if (pos != string::npos) {
@@ -2139,7 +2143,7 @@ bool MayaEggLoader::ConvertEggFile(const char *name, bool merge, bool model, boo
 MObject MayaEggLoader::GetDependencyNode(string givenName)
 {
   MObject node = MObject::kNullObj;
-  int pos;
+  size_t pos;
   string name;
 
   pos = givenName.find(":");

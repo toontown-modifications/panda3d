@@ -34,6 +34,10 @@
 #include "config_grutil.h"
 #include "typeHandle.h"
 
+using std::endl;
+using std::max;
+using std::min;
+
 ConfigVariableBool stm_use_hexagonal_layout
 ("stm-use-hexagonal-layout", false,
  PRC_DESC("Set this to true to use a hexagonal vertex layout. This approximates "
@@ -118,6 +122,7 @@ ShaderTerrainMesh::ShaderTerrainMesh() :
  * @return true if the terrain was initialized, false if an error occured
  */
 bool ShaderTerrainMesh::generate() {
+  MutexHolder holder(_lock);
   if (!do_check_heightfield())
     return false;
 
@@ -457,6 +462,7 @@ bool ShaderTerrainMesh::safe_to_combine() const {
  * @copydoc PandaNode::add_for_draw()
  */
 void ShaderTerrainMesh::add_for_draw(CullTraverser *trav, CullTraverserData &data) {
+  MutexHolder holder(_lock);
 
   // Make sure the terrain was properly initialized, and the geom was created
   // successfully
@@ -542,7 +548,7 @@ void ShaderTerrainMesh::add_for_draw(CullTraverser *trav, CullTraverserData &dat
   state = state->set_attrib(current_shader_attrib, 10000);
 
   // Emit chunk
-  CullableObject *object = new CullableObject(_chunk_geom, move(state), move(modelview_transform));
+  CullableObject *object = new CullableObject(_chunk_geom, std::move(state), std::move(modelview_transform));
   trav->get_cull_handler()->record_object(object, trav);
 
   // After rendering, increment the view index
@@ -707,6 +713,7 @@ void ShaderTerrainMesh::do_emit_chunk(Chunk* chunk, TraversalData* data) {
  * @return World-Space point
  */
 LPoint3 ShaderTerrainMesh::uv_to_world(const LTexCoord& coord) const {
+  MutexHolder holder(_lock);
   nassertr(_heightfield_tex != nullptr, LPoint3(0)); // Heightfield not set yet
   nassertr(_heightfield_tex->has_ram_image(), LPoint3(0)); // Heightfield not in memory
 

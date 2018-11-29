@@ -26,6 +26,8 @@
 #include <math.h>
 #include <tchar.h>
 
+using std::endl;
+
 TypeHandle wdxGraphicsWindow9::_type_handle;
 
 /**
@@ -33,7 +35,7 @@ TypeHandle wdxGraphicsWindow9::_type_handle;
  */
 wdxGraphicsWindow9::
 wdxGraphicsWindow9(GraphicsEngine *engine, GraphicsPipe *pipe,
-                   const string &name,
+                   const std::string &name,
                    const FrameBufferProperties &fb_prop,
                    const WindowProperties &win_prop,
                    int flags,
@@ -876,14 +878,14 @@ choose_device() {
     LARGE_INTEGER *DrvVer = &adapter_info.DriverVersion;
 
     wdxdisplay9_cat.info()
-      << "D3D9." << (dxpipe->__is_dx9_1 ?"1":"0") << " Adapter[" << i << "]: " << adapter_info.Description
+      << "D3D9 Adapter[" << i << "]: " << adapter_info.Description
       << ", Driver: " << adapter_info.Driver << ", DriverVersion: ("
       << HIWORD(DrvVer->HighPart) << "." << LOWORD(DrvVer->HighPart) << "."
       << HIWORD(DrvVer->LowPart) << "." << LOWORD(DrvVer->LowPart)
-      << ")\nVendorID: 0x" << hex << adapter_info.VendorId
+      << ")\nVendorID: 0x" << std::hex << adapter_info.VendorId
       << " DeviceID: 0x" << adapter_info.DeviceId
       << " SubsysID: 0x" << adapter_info.SubSysId
-      << " Revision: 0x" << adapter_info.Revision << dec << endl;
+      << " Revision: 0x" << adapter_info.Revision << std::dec << endl;
 
     HMONITOR _monitor = dxpipe->__d3d9->GetAdapterMonitor(i);
     if (_monitor == nullptr) {
@@ -977,7 +979,6 @@ consider_device(wdxGraphicsPipe9 *dxpipe, DXDeviceInfo *device_info) {
 
   nassertr(_dxgsg != nullptr, false);
   _wcontext._d3d9 = _d3d9;
-  _wcontext._is_dx9_1 = dxpipe->__is_dx9_1;
   _wcontext._card_id = device_info->cardID;  // could this change by end?
 
   bool bWantStencil = (_fb_properties.get_stencil_bits() > 0);
@@ -1227,7 +1228,10 @@ init_resized_window() {
   DWORD flags;
   D3DCOLOR clear_color;
 
-  flags = D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER;
+  flags = D3DCLEAR_TARGET;
+  if (_fb_properties.get_depth_bits() > 0) {
+    flags |= D3DCLEAR_ZBUFFER;
+  }
   clear_color = 0x00000000;
   hr = _wcontext._d3d_device-> Clear (0, nullptr, flags, clear_color, 0.0f, 0);
   if (FAILED(hr)) {

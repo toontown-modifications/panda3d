@@ -12,12 +12,16 @@
  */
 
 #include "bulletHelper.h"
+
 #include "bulletRigidBodyNode.h"
+#include "bulletSoftBodyNode.h"
 #include "bulletGhostNode.h"
 
 #include "geomLines.h"
 #include "geomTriangles.h"
 #include "geomVertexRewriter.h"
+
+#include "bullet_utils.h"
 
 PT(InternalName) BulletHelper::_sb_index;
 PT(InternalName) BulletHelper::_sb_flip;
@@ -83,7 +87,7 @@ from_collision_solids(NodePath &np, bool clear) {
 bool BulletHelper::
 is_tangible(CollisionNode *cnode) {
 
-  for (int j=0; j<cnode->get_num_solids(); j++) {
+  for (size_t j = 0; j < cnode->get_num_solids(); ++j) {
     CPT(CollisionSolid) solid = cnode->get_solid(j);
     if (solid->is_tangible()) {
         return true;

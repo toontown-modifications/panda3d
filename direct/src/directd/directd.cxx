@@ -30,9 +30,14 @@
 
 #include "pset.h"
 
-#if !defined(CPPPARSER) && !defined(BUILDING_DIRECT_DIRECTD)
+#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_DIRECT_DIRECTD)
   #error Buildsystem error: BUILDING_DIRECT_DIRECTD not defined
 #endif
+
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::string;
 
 namespace {
   // ...This section is part of the old stuff from the original
@@ -148,7 +153,7 @@ DirectD::~DirectD() {
 int
 DirectD::client_ready(const string& server_host, int port,
     const string& cmd) {
-  stringstream ss;
+  std::stringstream ss;
   ss<<"!"<<cmd;
   send_one_message(server_host, port, ss.str());
   return 0;

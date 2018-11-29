@@ -22,6 +22,8 @@
 #include "pset.h"
 #include "indent.h"
 
+using std::ostream;
+
 TypeHandle GeomVertexData::_type_handle;
 TypeHandle GeomVertexData::CDataCache::_type_handle;
 TypeHandle GeomVertexData::CacheEntry::_type_handle;
@@ -60,7 +62,7 @@ make_cow_copy() {
  *
  */
 GeomVertexData::
-GeomVertexData(const string &name,
+GeomVertexData(const std::string &name,
                const GeomVertexFormat *format,
                GeomVertexData::UsageHint usage_hint) :
   _name(name),
@@ -210,7 +212,7 @@ compare_to(const GeomVertexData &other) const {
  * graph for vertex computations.
  */
 void GeomVertexData::
-set_name(const string &name) {
+set_name(const std::string &name) {
   _name = name;
   _char_pcollector = PStatCollector(_animation_pcollector, name);
   _skinning_pcollector = PStatCollector(_char_pcollector, "Skinning");
@@ -342,7 +344,7 @@ void GeomVertexData::
 clear_rows() {
   Thread *current_thread = Thread::get_current_thread();
   CDWriter cdata(_cycler, true, current_thread);
-  nassertv(cdata->_format->get_num_arrays() == (int)cdata->_arrays.size());
+  nassertv(cdata->_format->get_num_arrays() == cdata->_arrays.size());
 
   Arrays::iterator ai;
   for (ai = cdata->_arrays.begin();
@@ -619,13 +621,26 @@ copy_from(const GeomVertexData *source, bool keep_data_objects,
             const TransformBlend &blend = blend_table->get_blend(from.get_data1i());
             LVecBase4 weights = LVecBase4::zero();
             LVecBase4i indices(0, 0, 0, 0);
-            nassertv(blend.get_num_transforms() <= 4);
 
-            for (size_t i = 0; i < blend.get_num_transforms(); i++) {
-              weights[i] = blend.get_weight(i);
-              indices[i] = add_transform(transform_table, blend.get_transform(i),
-                                         already_added);
+            if (blend.get_num_transforms() <= 4) {
+              for (size_t i = 0; i < blend.get_num_transforms(); i++) {
+                weights[i] = blend.get_weight(i);
+                indices[i] = add_transform(transform_table, blend.get_transform(i),
+                                           already_added);
+              }
+            } else {
+              // Limit the number of blends to the four with highest weights.
+              TransformBlend blend2(blend);
+              blend2.limit_transforms(4);
+              blend2.normalize_weights();
+
+              for (size_t i = 0; i < 4; i++) {
+                weights[i] = blend2.get_weight(i);
+                indices[i] = add_transform(transform_table, blend2.get_transform(i),
+                                           already_added);
+              }
             }
+
             if (weight.has_column()) {
               weight.set_data4(weights);
             }
@@ -761,7 +776,7 @@ convert_to(const GeomVertexFormat *new_format) const {
   if (entry == nullptr) {
     // Create a new entry for the result.
     // We don't need the key anymore, move the pointers into the CacheEntry.
-    entry = new CacheEntry((GeomVertexData *)this, move(key));
+    entry = new CacheEntry((GeomVertexData *)this, std::move(key));
 
     {
       LightMutexHolder holder(_cache_lock);
@@ -969,7 +984,7 @@ animate_vertices(bool force, Thread *current_thread) const {
     if (!cdata->_transform_blend_table.is_null()) {
       if (cdata->_slider_table != nullptr) {
         modified =
-          max(cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread),
+          std::max(cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread),
               cdata->_slider_table->get_modified(current_thread));
       } else {
         modified = cdata->_transform_blend_table.get_read_pointer()->get_modified(current_thread);
@@ -1106,7 +1121,8 @@ do_set_color(GeomVertexData *vdata, const LColor &color) {
   const GeomVertexColumn *column;
   int array_index;
   if (!format->get_array_info(InternalName::get_color(), array_index, column)) {
-    nassertv(false);
+    nassert_raise("no color column");
+    return;
   }
 
   size_t stride = format->get_array(array_index)->get_stride();
@@ -1316,7 +1332,7 @@ describe_vertex(ostream &out, int row) const {
     const GeomVertexColumn *column = format->get_column(ci);
     reader.set_column(ai, column);
 
-    int num_values = min(column->get_num_values(), 4);
+    int num_values = std::min(column->get_num_values(), 4);
     const LVecBase4 &d = reader.get_data4();
 
     out << "  " << *column->get_name();
@@ -1470,7 +1486,7 @@ update_animated_vertices(GeomVertexData::CData *cdata, Thread *current_thread) {
     new_format = orig_format->get_post_animated_format();
     cdata->_animated_vertices =
       new GeomVertexData(get_name(), new_format,
-                         min(get_usage_hint(), UH_dynamic));
+                         std::min(get_usage_hint(), UH_dynamic));
   }
   PT(GeomVertexData) new_data = cdata->_animated_vertices;
 
@@ -2241,7 +2257,7 @@ get_num_bytes() const {
  */
 int GeomVertexDataPipelineReader::
 get_num_rows() const {
-  nassertr(_cdata->_format->get_num_arrays() == (int)_cdata->_arrays.size(), 0);
+  nassertr(_cdata->_format->get_num_arrays() == _cdata->_arrays.size(), 0);
   nassertr(_got_array_readers, 0);
 
   if (_cdata->_format->get_num_arrays() == 0) {
@@ -2393,7 +2409,7 @@ make_array_readers() {
  */
 int GeomVertexDataPipelineWriter::
 get_num_rows() const {
-  nassertr(_cdata->_format->get_num_arrays() == (int)_cdata->_arrays.size(), 0);
+  nassertr(_cdata->_format->get_num_arrays() == _cdata->_arrays.size(), 0);
   nassertr(_got_array_writers, 0);
 
   if (_cdata->_format->get_num_arrays() == 0) {
@@ -2412,7 +2428,7 @@ get_num_rows() const {
 bool GeomVertexDataPipelineWriter::
 set_num_rows(int n) {
   nassertr(_got_array_writers, false);
-  nassertr(_cdata->_format->get_num_arrays() == (int)_cdata->_arrays.size(), false);
+  nassertr(_cdata->_format->get_num_arrays() == _cdata->_arrays.size(), false);
 
   bool any_changed = false;
 
@@ -2508,7 +2524,7 @@ set_num_rows(int n) {
 bool GeomVertexDataPipelineWriter::
 unclean_set_num_rows(int n) {
   nassertr(_got_array_writers, false);
-  nassertr(_cdata->_format->get_num_arrays() == (int)_cdata->_arrays.size(), false);
+  nassertr(_cdata->_format->get_num_arrays() == _cdata->_arrays.size(), false);
 
   bool any_changed = false;
 
@@ -2535,7 +2551,7 @@ unclean_set_num_rows(int n) {
 bool GeomVertexDataPipelineWriter::
 reserve_num_rows(int n) {
   nassertr(_got_array_writers, false);
-  nassertr(_cdata->_format->get_num_arrays() == (int)_cdata->_arrays.size(), false);
+  nassertr(_cdata->_format->get_num_arrays() == _cdata->_arrays.size(), false);
 
   bool any_changed = false;
 

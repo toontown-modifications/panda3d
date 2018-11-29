@@ -22,6 +22,9 @@
 #include "lmatrix.h"
 #include "dcast.h"
 
+using std::ostream;
+using std::string;
+
 
 TypeHandle EggGroup::_type_handle;
 
@@ -189,7 +192,8 @@ write(ostream &out, int indent_level) const {
 
   default:
     // invalid group type
-    nassertv(false);
+    nassert_raise("invalid EggGroup type");
+    return;
   }
 
   if (is_of_type(EggBin::get_class_type())) {

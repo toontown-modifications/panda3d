@@ -17,9 +17,12 @@
 #include "ffmpegVirtualFile.h"
 #include "virtualFileSystem.h"
 
+using std::streampos;
+using std::streamsize;
+
 extern "C" {
-  #include "libavcodec/avcodec.h"
-  #include "libavformat/avformat.h"
+  #include <libavcodec/avcodec.h>
+  #include <libavformat/avformat.h>
 }
 
 #ifndef AVSEEK_SIZE
@@ -186,7 +189,10 @@ register_protocol() {
   }
 
   // Here's a good place to call this global ffmpeg initialization function.
+  // However, ffmpeg (but not libav) deprecated this, hence this check.
+#if LIBAVFORMAT_VERSION_MICRO < 100 || LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
   av_register_all();
+#endif
 
   // And this one.
   avformat_network_init();
@@ -202,7 +208,7 @@ int FfmpegVirtualFile::
 read_packet(void *opaque, uint8_t *buf, int size) {
   streampos ssize = (streampos)size;
   FfmpegVirtualFile *self = (FfmpegVirtualFile *) opaque;
-  istream *in = self->_in;
+  std::istream *in = self->_in;
 
   // Since we may be simulating a subset of the opened stream, don't allow it
   // to read past the "end".
@@ -228,21 +234,21 @@ read_packet(void *opaque, uint8_t *buf, int size) {
 int64_t FfmpegVirtualFile::
 seek(void *opaque, int64_t pos, int whence) {
   FfmpegVirtualFile *self = (FfmpegVirtualFile *) opaque;
-  istream *in = self->_in;
+  std::istream *in = self->_in;
 
   switch (whence) {
   case SEEK_SET:
-    in->seekg(self->_start + (streampos)pos, ios::beg);
+    in->seekg(self->_start + (streampos)pos, std::ios::beg);
     break;
 
   case SEEK_CUR:
-    in->seekg(pos, ios::cur);
+    in->seekg(pos, std::ios::cur);
     break;
 
   case SEEK_END:
     // For seeks relative to the end, we actually compute the end based on
     // _start + _size, and then use ios::beg.
-    in->seekg(self->_start + (streampos)self->_size + (streampos)pos, ios::beg);
+    in->seekg(self->_start + (streampos)self->_size + (streampos)pos, std::ios::beg);
     break;
 
   case AVSEEK_SIZE:

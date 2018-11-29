@@ -27,19 +27,19 @@ TypeHandle AnimControl::_type_handle;
  * being loaded during an asynchronous load-and-bind operation.
  */
 AnimControl::
-AnimControl(const string &name, PartBundle *part,
+AnimControl(const std::string &name, PartBundle *part,
             double frame_rate, int num_frames) :
   Namable(name),
   _pending_lock(name),
   _pending_cvar(_pending_lock),
-  _bound_joints(BitArray::all_on())
+  _bound_joints(BitArray::all_on()),
+  _part(part)
 {
 #ifdef DO_MEMORY_USAGE
   MemoryUsage::update_type(this, get_class_type());
 #endif
 
   _pending = true;
-  _part = part;
   _anim = nullptr;
   _channel_index = -1;
   set_frame_rate(frame_rate);
@@ -131,7 +131,7 @@ wait_pending() {
  * binding, the event will be thrown immediately.
  */
 void AnimControl::
-set_pending_done_event(const string &done_event) {
+set_pending_done_event(const std::string &done_event) {
   MutexHolder holder(_pending_lock);
   _pending_done_event = done_event;
   if (!_pending) {
@@ -143,7 +143,7 @@ set_pending_done_event(const string &done_event) {
  * Returns the event name that will be thrown when the AnimControl is finished
  * binding asynchronously.
  */
-string AnimControl::
+std::string AnimControl::
 get_pending_done_event() const {
   MutexHolder holder(_pending_lock);
   return _pending_done_event;
@@ -161,7 +161,7 @@ get_part() const {
  *
  */
 void AnimControl::
-output(ostream &out) const {
+output(std::ostream &out) const {
   out << "AnimControl(" << get_name() << ", " << get_part()->get_name()
       << ": ";
   AnimInterface::output(out);

@@ -49,6 +49,14 @@
 
 #include <stddef.h>
 
+using std::endl;
+using std::istream;
+using std::max;
+using std::min;
+using std::ostream;
+using std::string;
+using std::swap;
+
 ConfigVariableEnum<Texture::QualityLevel> texture_quality_level
 ("texture-quality-level", Texture::QL_normal,
  PRC_DESC("This specifies a global quality level for all textures.  You "
@@ -1419,8 +1427,7 @@ peek() {
  */
 PT(AsyncFuture) Texture::
 prepare(PreparedGraphicsObjects *prepared_objects) {
-  PT(PreparedGraphicsObjects::EnqueuedObject) obj = prepared_objects->enqueue_texture_future(this);
-  return obj.p();
+  return prepared_objects->enqueue_texture_future(this);
 }
 
 /**
@@ -3960,7 +3967,7 @@ do_read_dds(CData *cdata, istream &in, const string &filename, bool header_only)
     default:
       gobj_cat.error()
         << filename << ": unsupported texture compression (FourCC: 0x"
-        << hex << header.pf.four_cc << dec << ").\n";
+        << std::hex << header.pf.four_cc << std::dec << ").\n";
       return false;
     }
 
@@ -4216,7 +4223,7 @@ do_read_ktx(CData *cdata, istream &in, const string &filename, bool header_only)
   }
 
   // See: https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
-  uint32_t gl_type, type_size, gl_format, internal_format, gl_base_format,
+  uint32_t gl_type, /*type_size,*/ gl_format, internal_format, gl_base_format,
     width, height, depth, num_array_elements, num_faces, num_mipmap_levels,
     kvdata_size;
 
@@ -4224,7 +4231,7 @@ do_read_ktx(CData *cdata, istream &in, const string &filename, bool header_only)
   if (ktx.get_uint32() == 0x04030201) {
     big_endian = false;
     gl_type = ktx.get_uint32();
-    type_size = ktx.get_uint32();
+    /*type_size = */ktx.get_uint32();
     gl_format = ktx.get_uint32();
     internal_format = ktx.get_uint32();
     gl_base_format = ktx.get_uint32();
@@ -4238,7 +4245,7 @@ do_read_ktx(CData *cdata, istream &in, const string &filename, bool header_only)
   } else {
     big_endian = true;
     gl_type = ktx.get_be_uint32();
-    type_size = ktx.get_be_uint32();
+    /*type_size = */ktx.get_be_uint32();
     gl_format = ktx.get_be_uint32();
     internal_format = ktx.get_be_uint32();
     gl_base_format = ktx.get_be_uint32();
@@ -4432,8 +4439,8 @@ do_read_ktx(CData *cdata, istream &in, const string &filename, bool header_only)
     if (base_format != gl_base_format) {
       gobj_cat.error()
         << filename << " has internal format that is incompatible with base "
-           "format (0x" << hex << gl_base_format << ", expected 0x"
-        << base_format << dec << ")\n";
+           "format (0x" << std::hex << gl_base_format << ", expected 0x"
+        << base_format << std::dec << ")\n";
       return false;
     }
 
@@ -4890,19 +4897,19 @@ do_read_ktx(CData *cdata, istream &in, const string &filename, bool header_only)
             }
             break;
           default:
-            nassertr(false, false);
-            break;
+            nassert_raise("unexpected channel count");
+            return false;
           }
         }
 
-        do_set_ram_mipmap_image(cdata, (int)n, move(image),
+        do_set_ram_mipmap_image(cdata, (int)n, std::move(image),
           row_size * do_get_expected_mipmap_y_size(cdata, (int)n));
 
       } else {
         // Compressed image.  We'll trust that the file has the right size.
         image = PTA_uchar::empty_array(image_size);
         ktx.extract_bytes(image.p(), image_size);
-        do_set_ram_mipmap_image(cdata, (int)n, move(image), image_size / depth);
+        do_set_ram_mipmap_image(cdata, (int)n, std::move(image), image_size / depth);
       }
 
       ktx.skip_bytes(3 - ((image_size + 3) & 3));
@@ -5587,180 +5594,114 @@ do_set_ram_mipmap_image(CData *cdata, int n, CPTA_uchar image, size_t page_size)
 size_t Texture::
 do_get_clear_data(const CData *cdata, unsigned char *into) const {
   nassertr(cdata->_has_clear_color, 0);
-  nassertr(cdata->_num_components <= 4, 0);
+
+  int num_components = cdata->_num_components;
+  nassertr(num_components > 0, 0);
+  nassertr(num_components <= 4, 0);
+
+  LVecBase4 clear_value = cdata->_clear_color;
+
+  // Swap red and blue components.
+  if (num_components >= 3) {
+    std::swap(clear_value[0], clear_value[2]);
+  }
 
   switch (cdata->_component_type) {
   case T_unsigned_byte:
     if (is_srgb(cdata->_format)) {
       xel color;
       xelval alpha;
-      encode_sRGB_uchar(cdata->_clear_color, color, alpha);
-      switch (cdata->_num_components) {
-      case 2:
-        into[1] = (unsigned char)color.g;
-      case 1:
-        into[0] = (unsigned char)color.r;
-        break;
-      case 4:
-        into[3] = (unsigned char)alpha;
-      case 3: // BGR <-> RGB
-        into[0] = (unsigned char)color.b;
-        into[1] = (unsigned char)color.g;
-        into[2] = (unsigned char)color.r;
-        break;
+      encode_sRGB_uchar(clear_value, color, alpha);
+      switch (num_components) {
+      case 4: into[3] = (unsigned char)alpha;
+      case 3: into[2] = (unsigned char)color.b;
+      case 2: into[1] = (unsigned char)color.g;
+      case 1: into[0] = (unsigned char)color.r;
       }
-      break;
     } else {
-      LColor scaled = cdata->_clear_color.fmin(LColor(1)).fmax(LColor::zero());
+      LColor scaled = clear_value.fmin(LColor(1)).fmax(LColor::zero());
       scaled *= 255;
-      switch (cdata->_num_components) {
-      case 2:
-        into[1] = (unsigned char)scaled[1];
-      case 1:
-        into[0] = (unsigned char)scaled[0];
-        break;
-      case 4:
-        into[3] = (unsigned char)scaled[3];
-      case 3: // BGR <-> RGB
-        into[0] = (unsigned char)scaled[2];
-        into[1] = (unsigned char)scaled[1];
-        into[2] = (unsigned char)scaled[0];
-        break;
+      for (int i = 0; i < num_components; ++i) {
+        into[i] = (unsigned char)scaled[i];
       }
-      break;
     }
+    break;
 
   case T_unsigned_short:
     {
-      LColor scaled = cdata->_clear_color.fmin(LColor(1)).fmax(LColor::zero());
+      LColor scaled = clear_value.fmin(LColor(1)).fmax(LColor::zero());
       scaled *= 65535;
-      switch (cdata->_num_components) {
-      case 2:
-        ((unsigned short *)into)[1] = (unsigned short)scaled[1];
-      case 1:
-        ((unsigned short *)into)[0] = (unsigned short)scaled[0];
-        break;
-      case 4:
-        ((unsigned short *)into)[3] = (unsigned short)scaled[3];
-      case 3: // BGR <-> RGB
-        ((unsigned short *)into)[0] = (unsigned short)scaled[2];
-        ((unsigned short *)into)[1] = (unsigned short)scaled[1];
-        ((unsigned short *)into)[2] = (unsigned short)scaled[0];
-        break;
+      for (int i = 0; i < num_components; ++i) {
+        ((unsigned short *)into)[i] = (unsigned short)scaled[i];
       }
       break;
     }
 
   case T_float:
-    switch (cdata->_num_components) {
-    case 2:
-      ((float *)into)[1] = cdata->_clear_color[1];
-    case 1:
-      ((float *)into)[0] = cdata->_clear_color[0];
-      break;
-    case 4:
-      ((float *)into)[3] = cdata->_clear_color[3];
-    case 3: // BGR <-> RGB
-      ((float *)into)[0] = cdata->_clear_color[2];
-      ((float *)into)[1] = cdata->_clear_color[1];
-      ((float *)into)[2] = cdata->_clear_color[0];
-      break;
+    for (int i = 0; i < num_components; ++i) {
+      ((float *)into)[i] = clear_value[i];
     }
     break;
 
   case T_unsigned_int_24_8:
-    nassertr(cdata->_num_components == 1, 0);
+    nassertr(num_components == 1, 0);
     *((unsigned int *)into) =
-      ((unsigned int)(cdata->_clear_color[0] * 16777215) << 8) +
-       (unsigned int)max(min(cdata->_clear_color[1], (PN_stdfloat)255), (PN_stdfloat)0);
+      ((unsigned int)(clear_value[0] * 16777215) << 8) +
+       (unsigned int)max(min(clear_value[1], (PN_stdfloat)255), (PN_stdfloat)0);
     break;
 
   case T_int:
-    {
-      // Note: there are no 32-bit UNORM textures.  Therefore, we don't do any
-      // normalization here, either.
-      switch (cdata->_num_components) {
-      case 2:
-        ((int *)into)[1] = (int)cdata->_clear_color[1];
-      case 1:
-        ((int *)into)[0] = (int)cdata->_clear_color[0];
-        break;
-      case 4:
-        ((int *)into)[3] = (int)cdata->_clear_color[3];
-      case 3: // BGR <-> RGB
-        ((int *)into)[0] = (int)cdata->_clear_color[2];
-        ((int *)into)[1] = (int)cdata->_clear_color[1];
-        ((int *)into)[2] = (int)cdata->_clear_color[0];
-        break;
-      }
-      break;
+    // Note: there are no 32-bit UNORM textures.  Therefore, we don't do any
+    // normalization here, either.
+    for (int i = 0; i < num_components; ++i) {
+      ((int *)into)[i] = (int)clear_value[i];
     }
+    break;
 
   case T_byte:
     {
-      LColor scaled = cdata->_clear_color.fmin(LColor(1)).fmax(LColor(-1));
+      LColor scaled = clear_value.fmin(LColor(1)).fmax(LColor(-1));
       scaled *= 127;
-      switch (cdata->_num_components) {
-      case 2:
-        into[1] = (char)scaled[1];
-      case 1:
-        into[0] = (char)scaled[0];
-        break;
-      case 4:
-        into[3] = (char)scaled[3];
-      case 3: // BGR <-> RGB
-        into[0] = (char)scaled[2];
-        into[1] = (char)scaled[1];
-        into[2] = (char)scaled[0];
-        break;
+      for (int i = 0; i < num_components; ++i) {
+        ((signed char *)into)[i] = (signed char)scaled[i];
       }
       break;
     }
 
   case T_short:
     {
-      LColor scaled = cdata->_clear_color.fmin(LColor(1)).fmax(LColor(-1));
+      LColor scaled = clear_value.fmin(LColor(1)).fmax(LColor(-1));
       scaled *= 32767;
-      switch (cdata->_num_components) {
-      case 2:
-        ((short *)into)[1] = (short)scaled[1];
-      case 1:
-        ((short *)into)[0] = (short)scaled[0];
-        break;
-      case 4:
-        ((short *)into)[3] = (short)scaled[3];
-      case 3: // BGR <-> RGB
-        ((short *)into)[0] = (short)scaled[2];
-        ((short *)into)[1] = (short)scaled[1];
-        ((short *)into)[2] = (short)scaled[0];
-        break;
+      for (int i = 0; i < num_components; ++i) {
+        ((short *)into)[i] = (short)scaled[i];
       }
       break;
     }
 
+  case T_half_float:
+    for (int i = 0; i < num_components; ++i) {
+      union {
+        uint32_t ui;
+        float uf;
+      } v;
+      v.uf = clear_value[i];
+      uint16_t sign = ((v.ui & 0x80000000u) >> 16u);
+      uint32_t mantissa = (v.ui & 0x007fffffu);
+      uint16_t exponent = (uint16_t)std::min(std::max((int)((v.ui & 0x7f800000u) >> 23u) - 112, 0), 31);
+      mantissa += (mantissa & 0x00001000u) << 1u;
+      ((uint16_t *)into)[i] = (uint16_t)(sign | ((exponent << 10u) | (mantissa >> 13u)));
+    }
+    break;
+
   case T_unsigned_int:
-    {
-      // Note: there are no 32-bit UNORM textures.  Therefore, we don't do any
-      // normalization here, either.
-      switch (cdata->_num_components) {
-      case 2:
-        ((unsigned int *)into)[1] = (unsigned int)cdata->_clear_color[1];
-      case 1:
-        ((unsigned int *)into)[0] = (unsigned int)cdata->_clear_color[0];
-        break;
-      case 4:
-        ((unsigned int *)into)[3] = (unsigned int)cdata->_clear_color[3];
-      case 3: // BGR <-> RGB
-        ((unsigned int *)into)[0] = (unsigned int)cdata->_clear_color[2];
-        ((unsigned int *)into)[1] = (unsigned int)cdata->_clear_color[1];
-        ((unsigned int *)into)[2] = (unsigned int)cdata->_clear_color[0];
-        break;
-      }
-      break;
+    // Note: there are no 32-bit UNORM textures.  Therefore, we don't do any
+    // normalization here, either.
+    for (int i = 0; i < num_components; ++i) {
+      ((unsigned int *)into)[i] = (unsigned int)clear_value[i];
     }
   }
 
-  return cdata->_num_components * cdata->_component_width;
+  return num_components * cdata->_component_width;
 }
 
 /**
@@ -6650,8 +6591,9 @@ do_reconsider_image_properties(CData *cdata, int x_size, int y_size, int num_com
 
     default:
       // Eh?
-      nassertr(false, false);
+      nassert_raise("unexpected channel count");
       cdata->_format = F_rgb;
+      return false;
     }
   }
 
@@ -8048,7 +7990,8 @@ convert_from_pfm(PTA_uchar &image, size_t page_size, int z,
     break;
 
   default:
-    nassertv(false);
+    nassert_raise("unexpected channel count");
+    return;
   }
 
   nassertv((unsigned char *)p == &image[idx] + page_size);
@@ -8258,7 +8201,8 @@ convert_to_pfm(PfmFile &pfm, int x_size, int y_size,
     break;
 
   default:
-    nassertr(false, false);
+    nassert_raise("unexpected channel count");
+    return false;
   }
 
   nassertr((unsigned char *)p == &image[idx] + page_size, false);

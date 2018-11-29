@@ -14,8 +14,9 @@
 #include "eggJointNodePointer.h"
 
 #include "dcast.h"
-#include "eggObject.h"
+#include "eggCharacterDb.h"
 #include "eggGroup.h"
+#include "eggObject.h"
 #include "pointerTo.h"
 
 
@@ -192,7 +193,7 @@ has_vertices() const {
  * pointer to it.
  */
 EggJointPointer *EggJointNodePointer::
-make_new_joint(const string &name) {
+make_new_joint(const std::string &name) {
   EggGroup *new_joint = new EggGroup(name);
   new_joint->set_group_type(EggGroup::GT_joint);
   _joint->add_child(new_joint);
@@ -203,6 +204,6 @@ make_new_joint(const string &name) {
  * Applies the indicated name change to the egg file.
  */
 void EggJointNodePointer::
-set_name(const string &name) {
+set_name(const std::string &name) {
   _joint->set_name(name);
 }

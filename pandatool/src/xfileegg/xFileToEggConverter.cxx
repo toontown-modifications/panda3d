@@ -19,12 +19,15 @@
 
 #include "eggData.h"
 #include "eggGroup.h"
+#include "eggTable.h"
 #include "eggXfmSAnim.h"
 #include "eggGroupUniquifier.h"
 #include "datagram.h"
 #include "eggMaterialCollection.h"
 #include "eggTextureCollection.h"
 #include "dcast.h"
+
+using std::string;
 
 /**
  *

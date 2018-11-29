@@ -33,12 +33,12 @@ LightReMutex x11GraphicsPipe::_x_mutex;
  *
  */
 x11GraphicsPipe::
-x11GraphicsPipe(const string &display) :
+x11GraphicsPipe(const std::string &display) :
   _have_xrandr(false),
   _xcursor_size(-1),
   _XF86DGADirectVideo(nullptr) {
 
-  string display_spec = display;
+  std::string display_spec = display;
   if (display_spec.empty()) {
     display_spec = display_cfg;
   }
@@ -65,6 +65,12 @@ x11GraphicsPipe(const string &display) :
   _root = (X11_Window)nullptr;
   _im = (XIM)nullptr;
   _hidden_cursor = None;
+
+  // According to the documentation, we should call this before making any
+  // other Xlib calls if we wish to use the Xlib locking system.
+  if (x_init_threads) {
+    XInitThreads();
+  }
 
   install_error_handlers();
 

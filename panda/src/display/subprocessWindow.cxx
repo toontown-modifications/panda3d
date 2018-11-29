@@ -18,6 +18,10 @@
 #include "graphicsEngine.h"
 #include "config_display.h"
 #include "nativeWindowHandle.h"
+#include "mouseButton.h"
+#include "throw_event.h"
+
+using std::string;
 
 TypeHandle SubprocessWindow::_type_handle;
 

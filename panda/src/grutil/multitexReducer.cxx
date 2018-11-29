@@ -37,6 +37,9 @@
 #include "geomVertexWriter.h"
 #include "geomVertexReader.h"
 
+using std::max;
+using std::min;
+
 /**
  *
  */
@@ -236,7 +239,7 @@ flatten(GraphicsOutput *window) {
                         window);
 
     static int multitex_id = 1;
-    ostringstream multitex_name_strm;
+    std::ostringstream multitex_name_strm;
     multitex_name_strm << "multitex" << multitex_id;
     multitex_id++;
 
@@ -437,7 +440,7 @@ scan_geom_node(GeomNode *node, const RenderState *state,
     if (grutil_cat.is_debug()) {
       grutil_cat.debug()
         << "geom " << gi << " net_state =\n";
-      geom_net_state->write(cerr, 2);
+      geom_net_state->write(std::cerr, 2);
     }
 
     // Get out the net TextureAttrib and TexMatrixAttrib from the state.
@@ -863,7 +866,7 @@ transfer_geom(GeomNode *geom_node, const InternalName *texcoord_name,
     PT(Geom) geom = orig_geom->make_copy();
 
     // Ensure that any vertex animation has been applied.
-    geom->set_vertex_data(geom->get_vertex_data(current_thread)->animate_vertices(true, current_thread));
+    geom->set_vertex_data(geom->get_animated_vertex_data(true, current_thread));
 
     // Now get a modifiable pointer to the vertex data in the new Geom.  This
     // will actually perform a deep copy of the vertex data.

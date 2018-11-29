@@ -207,7 +207,7 @@ issue_parameters(GSG *gsg, int altered) {
 
         // Calculate how many elements to transfer; no more than it expects,
         // but certainly no more than we have.
-        int input_size = min(abs(spec._dim[0] * spec._dim[1] * spec._dim[2]), (int)ptr_data->_size);
+        int input_size = std::min(abs(spec._dim[0] * spec._dim[1] * spec._dim[2]), (int)ptr_data->_size);
 
         CGparameter p = _cg_parameter_map[spec._id._seqno];
         switch (ptr_data->_type) {
@@ -313,7 +313,7 @@ issue_parameters(GSG *gsg, int altered) {
           }
 
           if (FAILED(hr)) {
-            string name = "unnamed";
+            std::string name = "unnamed";
 
             if (spec._arg[0]) {
               name = spec._arg[0]->get_basename();
@@ -390,6 +390,8 @@ update_shader_vertex_arrays(DXShaderContext9 *prev, GSG *gsg, bool force) {
     // arrays ("streams"), and we repeatedly iterate the parameters to pull
     // out only those for a single stream.
 
+    bool apply_white_color = false;
+
     int number_of_arrays = gsg->_data_reader->get_num_arrays();
     for (int array_index = 0; array_index < number_of_arrays; ++array_index) {
       const GeomVertexArrayDataHandle* array_reader =
@@ -423,6 +425,11 @@ update_shader_vertex_arrays(DXShaderContext9 *prev, GSG *gsg, bool force) {
           }
         }
 
+        if (name == InternalName::get_color() && !gsg->_vertex_colors_enabled) {
+          apply_white_color = true;
+          continue;
+        }
+
         const GeomVertexArrayDataHandle *param_array_reader;
         Geom::NumericType numeric_type;
         int num_values, start, stride;
@@ -435,6 +442,9 @@ update_shader_vertex_arrays(DXShaderContext9 *prev, GSG *gsg, bool force) {
           // shader parameter, which can cause Bad Things to happen so I'd
           // like to at least get a hint as to what's gone wrong.
           dxgsg9_cat.info() << "Geometry contains no data for shader parameter " << *name << "\n";
+          if (name == InternalName::get_color()) {
+            apply_white_color = true;
+          }
           continue;
         }
 
@@ -563,6 +573,19 @@ update_shader_vertex_arrays(DXShaderContext9 *prev, GSG *gsg, bool force) {
     }
 
     _num_bound_streams = number_of_arrays;
+
+    if (apply_white_color) {
+      // The shader needs a vertex color, but vertex colors are disabled.
+      // Bind a vertex buffer containing only one white colour.
+      int array_index = number_of_arrays;
+      LPDIRECT3DVERTEXBUFFER9 vbuffer = gsg->get_white_vbuffer();
+      hr = device->SetStreamSource(array_index, vbuffer, 0, 0);
+      if (FAILED(hr)) {
+        dxgsg9_cat.error() << "SetStreamSource failed" << D3DERRORSTRING(hr);
+      }
+      vertex_element_array->add_diffuse_color_vertex_element(array_index, 0);
+      ++_num_bound_streams;
+    }
 
     if (_vertex_element_array != nullptr &&
         _vertex_element_array->add_end_vertex_element()) {

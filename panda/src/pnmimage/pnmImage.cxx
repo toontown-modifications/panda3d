@@ -21,6 +21,9 @@
 #include "stackedPerlinNoise2.h"
 #include <algorithm>
 
+using std::max;
+using std::min;
+
 /**
  *
  */
@@ -295,10 +298,10 @@ read(const Filename &filename, PNMFileType *type, bool report_unknown_type) {
  * Returns true if successful, false on error.
  */
 bool PNMImage::
-read(istream &data, const string &filename, PNMFileType *type,
+read(std::istream &data, const std::string &filename, PNMFileType *type,
      bool report_unknown_type) {
   PNMReader *reader = PNMImageHeader::make_reader
-    (&data, false, filename, string(), type, report_unknown_type);
+    (&data, false, filename, std::string(), type, report_unknown_type);
   if (reader == nullptr) {
     clear();
     return false;
@@ -402,7 +405,7 @@ write(const Filename &filename, PNMFileType *type) const {
  * write.
  */
 bool PNMImage::
-write(ostream &data, const string &filename, PNMFileType *type) const {
+write(std::ostream &data, const std::string &filename, PNMFileType *type) const {
   if (!is_valid()) {
     return false;
   }
@@ -593,8 +596,8 @@ set_color_space(ColorSpace color_space) {
       break;
 
     default:
-      nassertv(false);
-      break;
+      nassert_raise("invalid color space");
+      return;
     }
 
     // Initialize the new encoding settings.
@@ -849,7 +852,7 @@ get_channel_val(int x, int y, int channel) const {
     pnmimage_cat.error()
       << "Invalid request for channel " << channel << " in "
       << get_num_channels() << "-channel image.\n";
-    nassertr(false, 0);
+    nassert_raise("unexpected channel count");
     return 0;
   }
 }
@@ -885,7 +888,8 @@ set_channel_val(int x, int y, int channel, xelval value) {
     break;
 
   default:
-    nassertv(false);
+    nassert_raise("unexpected channel count");
+    break;
   }
 }
 
@@ -915,7 +919,7 @@ get_channel(int x, int y, int channel) const {
     pnmimage_cat.error()
       << "Invalid request for channel " << channel << " in "
       << get_num_channels() << "-channel image.\n";
-    nassertr(false, 0);
+    nassert_raise("unexpected channel count");
     return 0;
   }
 }
@@ -951,7 +955,8 @@ set_channel(int x, int y, int channel, float value) {
     break;
 
   default:
-    nassertv(false);
+    nassert_raise("unexpected channel count");
+    break;
   }
 }
 
@@ -2123,7 +2128,7 @@ setup_encoding() {
       break;
 
     default:
-      nassertv(false);
+      nassert_raise("invalid color space");
       break;
     }
   } else {
@@ -2150,7 +2155,7 @@ setup_encoding() {
       break;
 
     default:
-      nassertv(false);
+      nassert_raise("invalid color space");
       break;
     }
   }

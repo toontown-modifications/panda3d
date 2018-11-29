@@ -73,6 +73,12 @@
 #include "datagramBuffer.h"
 #include "weakNodePath.h"
 
+using std::max;
+using std::move;
+using std::ostream;
+using std::ostringstream;
+using std::string;
+
 // stack seems to overflow on Intel C++ at 7000.  If we need more than 7000,
 // need to increase stack size.
 int NodePath::_max_search_depth = 7000;
@@ -712,7 +718,8 @@ get_state(const NodePath &other, Thread *current_thread) const {
     } else {
       pgraph_cat.error()
         << *this << " is not related to " << other << "\n";
-      nassertr(false, RenderState::make_empty());
+      nassert_raise("unrelated nodes");
+      return RenderState::make_empty();
     }
   }
 
@@ -786,7 +793,8 @@ get_transform(const NodePath &other, Thread *current_thread) const {
     } else {
       pgraph_cat.error()
         << *this << " is not related to " << other << "\n";
-      nassertr(false, TransformState::make_identity());
+      nassert_raise("unrelated nodes");
+      return TransformState::make_identity();
     }
   }
 
@@ -871,7 +879,8 @@ get_prev_transform(const NodePath &other, Thread *current_thread) const {
     } else {
       pgraph_cat.error()
         << *this << " is not related to " << other << "\n";
-      nassertr(false, TransformState::make_identity());
+      nassert_raise("unrelated nodes");
+      return TransformState::make_identity();
     }
   }
 
@@ -5171,7 +5180,7 @@ get_stashed_ancestor(Thread *current_thread) const {
  */
 bool NodePath::
 operator == (const WeakNodePath &other) const {
-  return _head == other._head;
+  return (other == *this);
 }
 
 /**
@@ -5179,7 +5188,7 @@ operator == (const WeakNodePath &other) const {
  */
 bool NodePath::
 operator != (const WeakNodePath &other) const {
-  return _head != other._head;
+  return (other != *this);
 }
 
 /**
@@ -5190,7 +5199,7 @@ operator != (const WeakNodePath &other) const {
  */
 bool NodePath::
 operator < (const WeakNodePath &other) const {
-  return _head < other._head;
+  return other.compare_to(*this) > 0;
 }
 
 /**
@@ -5205,13 +5214,7 @@ operator < (const WeakNodePath &other) const {
  */
 int NodePath::
 compare_to(const WeakNodePath &other) const {
-  // Nowadays, the NodePathComponents at the head are pointerwise equivalent
-  // if and only if the NodePaths are equivalent.  So we only have to compare
-  // pointers.
-  if (_head != other._head) {
-    return _head < other._head ? -1 : 1;
-  }
-  return 0;
+  return -other.compare_to(*this);
 }
 
 /**

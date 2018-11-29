@@ -19,7 +19,7 @@
 #include "config_downloader.h"
 
 #include "openSSLWrapper.h"  // must be included before any other openssl.
-#include "openssl/ssl.h"
+#include <openssl/ssl.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -30,6 +30,8 @@
 #include <netdb.h>
 #include <fcntl.h>
 #endif
+
+using std::string;
 
 #ifdef _WIN32
 static string format_error() {

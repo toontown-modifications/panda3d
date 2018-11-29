@@ -27,6 +27,8 @@
 #include "clockObject.h"
 #include "neverFreeMemory.h"
 
+using std::string;
+
 PStatCollector PStatClient::_heap_total_size_pcollector("System memory:Heap");
 PStatCollector PStatClient::_heap_overhead_size_pcollector("System memory:Heap:Overhead");
 PStatCollector PStatClient::_heap_single_size_pcollector("System memory:Heap:Single");
@@ -334,7 +336,7 @@ main_tick() {
               // Not used.
               break;
             }
-            ostringstream strm;
+            std::ostringstream strm;
             strm << "System memory:" << category << ":" << type;
             col = PStatCollector(strm.str());
           }
@@ -1054,7 +1056,9 @@ add_collector(PStatClient::Collector *collector) {
     // the lock.
     int new_collectors_size = (_collectors_size == 0) ? 128 : _collectors_size * 2;
     CollectorPointer *new_collectors = new CollectorPointer[new_collectors_size];
-    memcpy(new_collectors, _collectors, _num_collectors * sizeof(CollectorPointer));
+    if (_collectors != nullptr) {
+      memcpy(new_collectors, _collectors, _num_collectors * sizeof(CollectorPointer));
+    }
     AtomicAdjust::set_ptr(_collectors, new_collectors);
     AtomicAdjust::set(_collectors_size, new_collectors_size);
 
@@ -1089,7 +1093,9 @@ add_thread(PStatClient::InternalThread *thread) {
     // the lock.
     int new_threads_size = (_threads_size == 0) ? 128 : _threads_size * 2;
     ThreadPointer *new_threads = new ThreadPointer[new_threads_size];
-    memcpy(new_threads, _threads, _num_threads * sizeof(ThreadPointer));
+    if (_threads != nullptr) {
+      memcpy(new_threads, _threads, _num_threads * sizeof(ThreadPointer));
+    }
     // We assume that assignment to a pointer and to an int are each atomic.
     AtomicAdjust::set_ptr(_threads, new_threads);
     AtomicAdjust::set(_threads_size, new_threads_size);

@@ -19,8 +19,10 @@
 #include "pnotify.h"
 #include "panda_getopt_long.h"
 #include "preprocess_argv.h"
-#include "pystub.h"
 #include <time.h>
+
+using std::cerr;
+using std::string;
 
 CPPParser parser;
 
@@ -306,8 +308,6 @@ predefine_macro(CPPParser& parser, const string& inoption) {
 
 int
 main(int argc, char **argv) {
-  pystub();
-
   preprocess_argv(argc, argv);
   string command_line;
   int i;
@@ -513,7 +513,7 @@ main(int argc, char **argv) {
       cerr << "Error parsing file: '" << argv[i] << "'\n";
       exit(1);
     }
-    builder.add_source_file(filename);
+    builder.add_source_file(filename.to_os_generic());
   }
 
   // Now that we've parsed all the source code, change the way things are

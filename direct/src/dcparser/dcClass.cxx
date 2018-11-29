@@ -25,6 +25,10 @@
 #include "py_panda.h"
 #endif
 
+using std::ostream;
+using std::ostringstream;
+using std::string;
+
 #ifdef WITHIN_PANDA
 #include "pStatTimer.h"
 
@@ -177,9 +181,9 @@ DCField *DCClass::
 get_field(int n) const {
   #ifndef NDEBUG //[
   if (n < 0 || n >= (int)_fields.size()) {
-    cerr << *this << " "
+    std::cerr << *this << " "
          << "n:" << n << " _fields.size():"
-         << (int)_fields.size() << endl;
+         << (int)_fields.size() << std::endl;
     // __asm { int 3 }
   }
   #endif //]
@@ -749,7 +753,7 @@ pack_required_field(DCPacker &packer, PyObject *distobj,
   if (result == nullptr) {
     // We don't set this as an exception, since presumably the Python method
     // itself has already triggered a Python exception.
-    cerr << "Error when calling " << getter_name << "\n";
+    std::cerr << "Error when calling " << getter_name << "\n";
     return false;
   }
 
@@ -1236,7 +1240,7 @@ shadow_inherited_field(const string &name) {
   }
 
   // If we get here, the named field wasn't in the list.  Huh.
-  nassertv(false);
+  nassert_raise("named field not in list");
 }
 
 /**

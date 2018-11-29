@@ -17,6 +17,8 @@
 #include "wdxGraphicsBuffer9.h"
 #include "config_dxgsg9.h"
 
+using std::endl;
+
 TypeHandle wdxGraphicsPipe9::_type_handle;
 
 static bool MyGetProcAddr(HINSTANCE hDLL, FARPROC *pFn, const char *szExportedFnName) {
@@ -60,7 +62,7 @@ wdxGraphicsPipe9::
  * choose between several possible GraphicsPipes available on a particular
  * platform, so the name should be meaningful and unique for a given platform.
  */
-string wdxGraphicsPipe9::
+std::string wdxGraphicsPipe9::
 get_interface_name() const {
   return "DirectX9";
 }
@@ -78,7 +80,7 @@ pipe_constructor() {
  * Creates a new window on the pipe, if possible.
  */
 PT(GraphicsOutput) wdxGraphicsPipe9::
-make_output(const string &name,
+make_output(const std::string &name,
             const FrameBufferProperties &fb_prop,
             const WindowProperties &win_prop,
             int flags,
@@ -191,30 +193,10 @@ init() {
   }
 
   // Create a Direct3D object.
+  __d3d9 = (*_Direct3DCreate9)(D3D_SDK_VERSION);
 
-  // these were taken from the 8.0 and 8.1 d3d8.h SDK headers
-    __is_dx9_1 = false;
-
-#define D3D_SDK_VERSION_9_0 D3D_SDK_VERSION
-#define D3D_SDK_VERSION_9_1 D3D_SDK_VERSION
-
-  // are we using 9.0 or 9.1?
-  WIN32_FIND_DATA TempFindData;
-  HANDLE hFind;
-  char tmppath[_MAX_PATH + 128];
-  GetSystemDirectory(tmppath, MAX_PATH);
-  strcat(tmppath, "\\dpnhpast.dll");
-  hFind = FindFirstFile (tmppath, &TempFindData);
-  if (hFind != INVALID_HANDLE_VALUE) {
-    FindClose(hFind);
-// ??? This was from DX8 __is_dx9_1 = true;
-    __d3d9 = (*_Direct3DCreate9)(D3D_SDK_VERSION_9_1);
-  } else {
-    __is_dx9_1 = false;
-    __d3d9 = (*_Direct3DCreate9)(D3D_SDK_VERSION_9_0);
-  }
   if (__d3d9 == nullptr) {
-    wdxdisplay9_cat.error() << "Direct3DCreate9(9." << (__is_dx9_1 ? "1" : "0") << ") failed!, error = " << GetLastError() << endl;
+    wdxdisplay9_cat.error() << "Direct3DCreate9 failed!, error = " << GetLastError() << endl;
     // release_gsg();
     goto error;
   }
@@ -359,11 +341,13 @@ find_all_card_memavails() {
       if (!ISPOW2(dwVidMemTotal)) {
         // assume they wont return a proper max value, so round up to next pow
         // of 2
-        UINT count = 0;
-        while ((dwVidMemTotal >> count) != 0x0) {
-          count++;
+        int count = get_next_higher_bit((uint32_t)(dwVidMemTotal - 1u));
+        if (count >= 32u) {
+          // Maximum value that fits in a UINT.
+          dwVidMemTotal = 0xffffffffu;
+        } else {
+          dwVidMemTotal = (1u << count);
         }
-        dwVidMemTotal = (1 << count);
       }
     }
 
@@ -844,7 +828,7 @@ make_device(void *scrn) {
   _device = device;
   wdxdisplay9_cat.info() << "walla: device" << device << "\n";
 
-  return device.p();
+  return device;
 }
 
 pmap<D3DFORMAT_FLAG, D3DFORMAT> g_D3DFORMATmap;

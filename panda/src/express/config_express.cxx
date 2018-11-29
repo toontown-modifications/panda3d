@@ -36,7 +36,7 @@
 #include "dconfig.h"
 #include "streamWrapper.h"
 
-#if !defined(CPPPARSER) && !defined(BUILDING_PANDA_EXPRESS)
+#if !defined(CPPPARSER) && !defined(LINK_ALL_STATIC) && !defined(BUILDING_PANDA_EXPRESS)
   #error Buildsystem error: BUILDING_PANDA_EXPRESS not defined
 #endif
 
@@ -189,12 +189,4 @@ get_verify_dcast() {
   }
 
   return *verify_dcast;
-}
-
-// Returns the configure object for accessing config variables from a
-// scripting language.
-DConfig &
-get_config_express() {
-  static DConfig config_express;
-  return config_express;
 }

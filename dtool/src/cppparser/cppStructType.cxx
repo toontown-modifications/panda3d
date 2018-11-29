@@ -28,7 +28,7 @@
  *
  */
 void CPPStructType::Base::
-output(ostream &out) const {
+output(std::ostream &out) const {
   if (_is_virtual) {
     out << "virtual ";
   }
@@ -306,7 +306,6 @@ is_trivial() const {
   }
 
   // Now look for functions that are virtual or con/destructors.
-  bool is_default_constructible = true;
   CPPScope::Functions::const_iterator fi;
   for (fi = _scope->_functions.begin(); fi != _scope->_functions.end(); ++fi) {
     CPPFunctionGroup *fgroup = (*fi).second;
@@ -343,9 +342,6 @@ is_trivial() const {
           // Same for the default constructor.
           return false;
         }
-        // The presence of a non-default constructor makes the class not
-        // default-constructible.
-        is_default_constructible = false;
       }
 
       if (fgroup->_name == "operator =") {
@@ -356,7 +352,7 @@ is_trivial() const {
   }
 
   // Finally, the class must be default-constructible.
-  return is_default_constructible;
+  return is_default_constructible(V_public);
 }
 
 /**
@@ -543,6 +539,13 @@ is_copy_constructible(CPPVisibility min_vis) const {
     }
 
     return true;
+  }
+
+  if (get_move_constructor() != nullptr ||
+      get_move_assignment_operator() != nullptr) {
+    // A user-declared move constructor or move assignment operator means that
+    // the implicitly-declared copy constructor is deleted.
+    return false;
   }
 
   CPPInstance *destructor = get_destructor();
@@ -1240,7 +1243,7 @@ substitute_decl(CPPDeclaration::SubstDecl &subst,
  *
  */
 void CPPStructType::
-output(ostream &out, int indent_level, CPPScope *scope, bool complete) const {
+output(std::ostream &out, int indent_level, CPPScope *scope, bool complete) const {
   if (!complete && _ident != nullptr) {
     // If we have a name, use it.
     if (cppparser_output_class_keyword) {
@@ -1351,7 +1354,7 @@ get_virtual_funcs(VFunctions &funcs) const {
 
     } else {
       // Non-destructors we can try to match up by name.
-      string fname = inst->get_local_name();
+      std::string fname = inst->get_local_name();
       CPPScope::Functions::const_iterator fi;
       fi = _scope->_functions.find(fname);
 

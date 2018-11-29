@@ -19,13 +19,18 @@
 #include "interrogate_interface.h"
 #include "interrogate_request.h"
 #include "load_dso.h"
-#include "pystub.h"
 #include "pnotify.h"
 #include "panda_getopt_long.h"
 #include "preprocess_argv.h"
 #include "vector_string.h"
 
 #include <algorithm>
+
+using std::cerr;
+using std::string;
+
+// This contains a big source string determined at compile time.
+extern const char interrogate_preamble_python_native[];
 
 Filename output_code_filename;
 string module_name;
@@ -149,7 +154,7 @@ static bool print_dependent_types(const string &lib1, const string &lib2) {
   return false;
 }
 
-int write_python_table_native(ostream &out) {
+int write_python_table_native(std::ostream &out) {
   out << "\n#include \"dtoolbase.h\"\n"
       << "#include \"interrogate_request.h\"\n\n"
       << "#include \"py_panda.h\"\n\n";
@@ -192,7 +197,7 @@ int write_python_table_native(ostream &out) {
               interrogate_type_has_library_name(basetype)) {
             string baselib = interrogate_type_library_name(basetype);
             if (baselib != library_name) {
-              deps.insert(move(baselib));
+              deps.insert(std::move(baselib));
             }
           }
         }
@@ -203,7 +208,7 @@ int write_python_table_native(ostream &out) {
               interrogate_type_has_library_name(wrapped)) {
             string wrappedlib = interrogate_type_library_name(wrapped);
             if (wrappedlib != library_name) {
-              deps.insert(move(wrappedlib));
+              deps.insert(std::move(wrappedlib));
             }
           }
         }
@@ -283,9 +288,8 @@ int write_python_table_native(ostream &out) {
   vector_string::const_iterator ii;
   for (ii = libraries.begin(); ii != libraries.end(); ++ii) {
     printf("Referencing Library %s\n", (*ii).c_str());
-    out << "extern LibraryDef " << *ii << "_moddef;\n";
+    out << "extern const struct LibraryDef " << *ii << "_moddef;\n";
     out << "extern void Dtool_" << *ii << "_RegisterTypes();\n";
-    out << "extern void Dtool_" << *ii << "_ResolveExternals();\n";
     out << "extern void Dtool_" << *ii << "_BuildInstants(PyObject *module);\n";
   }
 
@@ -336,12 +340,9 @@ int write_python_table_native(ostream &out) {
   for (ii = libraries.begin(); ii != libraries.end(); ii++) {
     out << "  Dtool_" << *ii << "_RegisterTypes();\n";
   }
-  for (ii = libraries.begin(); ii != libraries.end(); ii++) {
-    out << "  Dtool_" << *ii << "_ResolveExternals();\n";
-  }
   out << "\n";
 
-  out << "  LibraryDef *defs[] = {";
+  out << "  const LibraryDef *defs[] = {";
   for(ii = libraries.begin(); ii != libraries.end(); ii++) {
     out << "&" << *ii << "_moddef, ";
   }
@@ -383,12 +384,9 @@ int write_python_table_native(ostream &out) {
   for (ii = libraries.begin(); ii != libraries.end(); ii++) {
     out << "  Dtool_" << *ii << "_RegisterTypes();\n";
   }
-  for (ii = libraries.begin(); ii != libraries.end(); ii++) {
-    out << "  Dtool_" << *ii << "_ResolveExternals();\n";
-  }
   out << "\n";
 
-  out << "  LibraryDef *defs[] = {";
+  out << "  const LibraryDef *defs[] = {";
   for(ii = libraries.begin(); ii != libraries.end(); ii++) {
     out << "&" << *ii << "_moddef, ";
   }
@@ -420,7 +418,7 @@ int write_python_table_native(ostream &out) {
   return count;
 }
 
-int write_python_table(ostream &out) {
+int write_python_table(std::ostream &out) {
   out << "\n#include \"dtoolbase.h\"\n"
       << "#include \"interrogate_request.h\"\n\n"
       << "#undef _POSIX_C_SOURCE\n"
@@ -542,8 +540,6 @@ int main(int argc, char *argv[]) {
   extern int optind;
   int flag;
 
-  pystub();
-
   preprocess_argv(argc, argv);
   flag = getopt_long_only(argc, argv, short_options, long_options, nullptr);
   while (flag != EOF) {
@@ -639,8 +635,10 @@ int main(int argc, char *argv[]) {
 
       if (build_python_native_wrappers) {
         write_python_table_native(output_code);
-      }
 
+        // Output the support code.
+        output_code << interrogate_preamble_python_native << "\n";
+      }
     }
   }
 

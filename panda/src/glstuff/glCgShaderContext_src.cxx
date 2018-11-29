@@ -226,12 +226,14 @@ CLP(CgShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderConte
         if (!resource) {
           resource = "unknown";
         }
-        GLCAT.error()
-          << "Could not find Cg varying " << cgGetParameterName(p);
-        if (attribname) {
-          GLCAT.error(false) << " : " << attribname;
+        if (GLCAT.is_debug()) {
+          GLCAT.debug()
+            << "Could not find Cg varying " << cgGetParameterName(p);
+          if (attribname) {
+            GLCAT.debug(false) << " : " << attribname;
+          }
+          GLCAT.debug(false) << " (" << resource << ") in the compiled GLSL program.\n";
         }
-        GLCAT.error(false) << " (" << resource << ") in the compiled GLSL program.\n";
 
       } else if (loc != 0 && bind._id._name == "vtx_position") {
         // We really have to bind the vertex position to attribute 0, since
@@ -312,10 +314,10 @@ CLP(CgShaderContext)(CLP(GraphicsStateGuardian) *glgsg, Shader *s) : ShaderConte
         GLCAT.debug(false)
           << " is bound to a conventional attribute (" << resource << ")\n";
       }
-    }
-    if (loc == CA_unknown) {
-      // Suggest fix to developer.
-      GLCAT.error() << "Try using a different semantic.\n";
+      if (loc == CA_unknown) {
+        // Suggest fix to developer.
+        GLCAT.debug() << "Try using a different semantic.\n";
+      }
     }
 #endif
 
@@ -508,7 +510,7 @@ issue_parameters(int altered) {
   if (GLCAT.is_spam()) {
     GLCAT.spam()
       << "Setting uniforms for " << _shader->get_filename()
-      << " (altered 0x" << hex << altered << dec << ")\n";
+      << " (altered 0x" << std::hex << altered << std::dec << ")\n";
   }
 
   // We have no way to track modifications to PTAs, so we assume that they are
@@ -525,7 +527,7 @@ issue_parameters(int altered) {
       }
 
       // Check if the size of the shader input and ptr_data match
-      int input_size = spec._dim[0] * spec._dim[1] * spec._dim[2];
+      size_t input_size = spec._dim[0] * spec._dim[1] * spec._dim[2];
 
       // dimension is negative only if the parameter had the (deprecated)k_
       // prefix.
@@ -648,6 +650,7 @@ issue_parameters(int altered) {
         continue;
 
       case Shader::SPT_int:
+      case Shader::SPT_uint:
         switch (spec._info._class) {
         case Shader::SAC_scalar:
           cgSetParameter1iv(p, (int*)ptr_data->_ptr);
@@ -737,7 +740,7 @@ update_transform_table(const TransformTable *table) {
 
   int i = 0;
   if (table != nullptr) {
-    int num_transforms = min(_transform_table_size, (long)table->get_num_transforms());
+    int num_transforms = std::min(_transform_table_size, (long)table->get_num_transforms());
     for (; i < num_transforms; ++i) {
 #ifdef STDFLOAT_DOUBLE
       LMatrix4 matrix;
@@ -765,7 +768,7 @@ update_slider_table(const SliderTable *table) {
   memset(sliders, 0, _slider_table_size * 4);
 
   if (table != nullptr) {
-    int num_sliders = min(_slider_table_size, (long)table->get_num_sliders());
+    int num_sliders = std::min(_slider_table_size, (long)table->get_num_sliders());
     for (int i = 0; i < num_sliders; ++i) {
       sliders[i] = table->get_slider(i)->get_slider();
     }
@@ -880,21 +883,25 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
         // limited in the options we can set.
         GLenum type = _glgsg->get_numeric_type(numeric_type);
         if (p >= 0) {
-          max_p = max(max_p, (GLuint)p + 1);
+          max_p = std::max(max_p, (GLuint)p + 1);
 
           _glgsg->enable_vertex_attrib_array(p);
 
-          if (bind._integer) {
-            _glgsg->_glVertexAttribIPointer(p, num_values, type,
-                                            stride, client_pointer);
-          } else if (numeric_type == GeomEnums::NT_packed_dabc) {
+          if (numeric_type == GeomEnums::NT_packed_dabc) {
             // GL_BGRA is a special accepted value available since OpenGL 3.2.
             // It requires us to pass GL_TRUE for normalized.
             _glgsg->_glVertexAttribPointer(p, GL_BGRA, GL_UNSIGNED_BYTE,
                                            GL_TRUE, stride, client_pointer);
-          } else {
+          } else if (bind._numeric_type == Shader::SPT_float ||
+                     numeric_type == GeomEnums::NT_float32) {
             _glgsg->_glVertexAttribPointer(p, num_values, type,
                                            normalized, stride, client_pointer);
+          } else if (bind._numeric_type == Shader::SPT_double) {
+            _glgsg->_glVertexAttribLPointer(p, num_values, type,
+                                            stride, client_pointer);
+          } else {
+            _glgsg->_glVertexAttribIPointer(p, num_values, type,
+                                            stride, client_pointer);
           }
 
           if (divisor > 0) {
@@ -951,10 +958,12 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
           // So, we work around this by just binding something silly to 0.
           // This breaks flat colors, but it's better than invisible objects?
           _glgsg->enable_vertex_attrib_array(0);
-          if (bind._integer) {
-            _glgsg->_glVertexAttribIPointer(0, 4, GL_INT, 0, 0);
-          } else {
+          if (bind._numeric_type == Shader::SPT_float) {
             _glgsg->_glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+          } else if (bind._numeric_type == Shader::SPT_double) {
+            _glgsg->_glVertexAttribLPointer(0, 4, GL_DOUBLE, 0, 0);
+          } else {
+            _glgsg->_glVertexAttribIPointer(0, 4, GL_INT, 0, 0);
           }
 
         } else if (p >= 0) {

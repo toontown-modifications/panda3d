@@ -51,7 +51,7 @@ TypeHandle GeomNode::_type_handle;
  *
  */
 GeomNode::
-GeomNode(const string &name) :
+GeomNode(const std::string &name) :
   PandaNode(name)
 {
   _preserved = preserve_geom_nodes;
@@ -115,7 +115,6 @@ apply_attribs_to_vertices(const AccumulatedAttribs &attribs, int attrib_types,
   Thread *current_thread = Thread::get_current_thread();
   OPEN_ITERATE_CURRENT_AND_UPSTREAM(_cycler, current_thread) {
     CDStageWriter cdata(_cycler, pipeline_stage, current_thread);
-    GeomList::iterator gi;
     PT(GeomList) geoms = cdata->modify_geoms();
 
     // Iterate based on the number of geoms, not using STL iterators.  This
@@ -377,8 +376,7 @@ r_prepare_scene(GraphicsStateGuardianBase *gsg, const RenderState *node_state,
     geom = transformer.premunge_geom(geom, munger);
 
     // Prepare each of the vertex arrays in the munged Geom.
-    CPT(GeomVertexData) vdata = geom->get_vertex_data(current_thread);
-    vdata = vdata->animate_vertices(false, current_thread);
+    CPT(GeomVertexData) vdata = geom->get_animated_vertex_data(false, current_thread);
     GeomVertexDataPipelineReader vdata_reader(vdata, current_thread);
     int num_arrays = vdata_reader.get_num_arrays();
     for (int i = 0; i < num_arrays; ++i) {
@@ -475,7 +473,7 @@ calc_tight_bounds(LPoint3 &min_point, LPoint3 &max_point, bool &found_any,
   for (gi = geoms->begin(); gi != geoms->end(); ++gi) {
     CPT(Geom) geom = (*gi)._geom.get_read_pointer();
     geom->calc_tight_bounds(min_point, max_point, found_any,
-                            geom->get_vertex_data(current_thread)->animate_vertices(true, current_thread),
+                            geom->get_animated_vertex_data(true, current_thread),
                             !next_transform->is_identity(), mat,
                             current_thread);
   }
@@ -559,7 +557,7 @@ add_for_draw(CullTraverser *trav, CullTraverserData &data) {
     }
 
     CullableObject *object =
-      new CullableObject(move(geom), move(state), internal_transform);
+      new CullableObject(std::move(geom), std::move(state), internal_transform);
     trav->get_cull_handler()->record_object(object, trav);
   }
 }
@@ -782,7 +780,7 @@ unify(int max_indices, bool preserve_order) {
  * Writes a short description of all the Geoms in the node.
  */
 void GeomNode::
-write_geoms(ostream &out, int indent_level) const {
+write_geoms(std::ostream &out, int indent_level) const {
   CDReader cdata(_cycler);
   write(out, indent_level);
   GeomList::const_iterator gi;
@@ -798,7 +796,7 @@ write_geoms(ostream &out, int indent_level) const {
  * Writes a detailed description of all the Geoms in the node.
  */
 void GeomNode::
-write_verbose(ostream &out, int indent_level) const {
+write_verbose(std::ostream &out, int indent_level) const {
   CDReader cdata(_cycler);
   write(out, indent_level);
   GeomList::const_iterator gi;
@@ -816,7 +814,7 @@ write_verbose(ostream &out, int indent_level) const {
  *
  */
 void GeomNode::
-output(ostream &out) const {
+output(std::ostream &out) const {
   // Accumulate the total set of RenderAttrib types that are applied to any of
   // our Geoms, so we can output them too.  The result will be the list of
   // attrib types that might be applied to some Geoms, but not necessarily to

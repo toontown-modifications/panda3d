@@ -44,7 +44,7 @@ class EXPCL_PANDA_PIPELINE CycleData : public NodeReferenceCount
 // If we are *not* compiling in pipelining support, the CycleData object is
 // stored directly within its containing classes, and hence should not be a
 // ReferenceCount object.
-class EXPCL_PANDA_PIPELINE CycleData
+class EXPCL_PANDA_PIPELINE CycleData : public MemoryBase
 
 #endif  // DO_PIPELINING
 {
@@ -53,6 +53,9 @@ public:
   INLINE CycleData(CycleData &&from) = default;
   INLINE CycleData(const CycleData &copy) = default;
   virtual ~CycleData();
+
+  CycleData &operator = (CycleData &&from) = default;
+  CycleData &operator = (const CycleData &copy) = default;
 
   virtual CycleData *make_copy() const=0;
 
@@ -65,6 +68,22 @@ public:
 
   virtual TypeHandle get_parent_type() const;
   virtual void output(std::ostream &out) const;
+
+#ifdef DO_PIPELINING
+public:
+  static TypeHandle get_class_type() {
+    return _type_handle;
+  }
+
+  static void init_type() {
+    NodeReferenceCount::init_type();
+    register_type(_type_handle, "CycleData",
+                  NodeReferenceCount::get_class_type());
+  }
+
+private:
+  static TypeHandle _type_handle;
+#endif
 };
 
 INLINE std::ostream &

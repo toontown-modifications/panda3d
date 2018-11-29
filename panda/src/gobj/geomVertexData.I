@@ -60,9 +60,20 @@ has_column(const InternalName *name) const {
  */
 INLINE int GeomVertexData::
 get_num_rows() const {
-  GeomVertexDataPipelineReader reader(this, Thread::get_current_thread());
-  reader.check_array_readers();
-  return reader.get_num_rows();
+  CPT(GeomVertexArrayData) array;
+  {
+    CDReader cdata(_cycler);
+    nassertr(cdata->_format->get_num_arrays() == cdata->_arrays.size(), 0);
+
+    if (cdata->_arrays.size() == 0) {
+      // No arrays means no rows.  Weird but legal.
+      return 0;
+    }
+
+    array = cdata->_arrays[0].get_read_pointer();
+  }
+
+  return array->get_num_rows();
 }
 
 /**
@@ -677,7 +688,7 @@ has_column(const InternalName *name) const {
 /**
  *
  */
-INLINE int GeomVertexDataPipelineBase::
+INLINE size_t GeomVertexDataPipelineBase::
 get_num_arrays() const {
   return _cdata->_arrays.size();
 }
@@ -686,8 +697,8 @@ get_num_arrays() const {
  *
  */
 INLINE CPT(GeomVertexArrayData) GeomVertexDataPipelineBase::
-get_array(int i) const {
-  nassertr(i >= 0 && i < (int)_cdata->_arrays.size(), nullptr);
+get_array(size_t i) const {
+  nassertr(i < _cdata->_arrays.size(), nullptr);
   return _cdata->_arrays[i].get_read_pointer();
 }
 
@@ -761,7 +772,9 @@ set_object(const GeomVertexData *object) {
   _cdata = (GeomVertexData::CData *)_object->_cycler.read_unlocked(_current_thread);
   _got_array_readers = false;
 
+#ifdef DO_PIPELINING
   _cdata->ref();
+#endif  // DO_PIPELINING
 }
 
 /**

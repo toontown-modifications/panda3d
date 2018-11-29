@@ -23,6 +23,8 @@
 
 #include <time.h>
 
+using std::string;
+
 TypeHandle DisplayRegion::_type_handle;
 TypeHandle DisplayRegionPipelineReader::_type_handle;
 
@@ -339,7 +341,7 @@ set_target_tex_page(int page) {
  *
  */
 void DisplayRegion::
-output(ostream &out) const {
+output(std::ostream &out) const {
   CDReader cdata(_cycler);
   out << "DisplayRegion(" << cdata->_regions[0]._dimensions
       << ")=pixels(" << cdata->_regions[0]._pixels << ")";
@@ -363,7 +365,7 @@ make_screenshot_filename(const string &prefix) {
   static const int buffer_size = 1024;
   char buffer[buffer_size];
 
-  ostringstream filename_strm;
+  std::ostringstream filename_strm;
 
   size_t i = 0;
   while (i < screenshot_filename.length()) {
@@ -481,6 +483,14 @@ get_screenshot() {
   GraphicsStateGuardian *gsg = window->get_gsg();
   nassertr(gsg != nullptr, nullptr);
 
+  // Are we on the draw thread?
+  if (gsg->get_threading_model().get_draw_stage() != current_thread->get_pipeline_stage()) {
+    // Ask the engine to do on the draw thread.
+    GraphicsEngine *engine = window->get_engine();
+    return engine->do_get_screenshot(this, gsg);
+  }
+
+  // We are on the draw thread.
   if (!window->begin_frame(GraphicsOutput::FM_refresh, current_thread)) {
     return nullptr;
   }
@@ -667,13 +677,32 @@ do_compute_pixels(int i, int x_size, int y_size, CData *cdata) {
  */
 void DisplayRegion::
 set_active_index(int index) {
-#ifdef DO_PSTATS
-  ostringstream strm;
-  strm << "dr_" << index;
-  string name = strm.str();
+#if defined(DO_PSTATS) || !defined(NDEBUG)
+  std::ostringstream strm;
 
-  _cull_region_pcollector = PStatCollector(_window->get_cull_window_pcollector(), name);
-  _draw_region_pcollector = PStatCollector(_window->get_draw_window_pcollector(), name);
+  // To make a more useful name for PStats and debug output, we add the scene
+  // graph name and camera name.
+  NodePath camera = get_camera();
+  if (!camera.is_empty()) {
+    Camera *camera_node = DCAST(Camera, camera.node());
+    if (camera_node != nullptr) {
+      NodePath scene_root = camera_node->get_scene();
+      if (scene_root.is_empty()) {
+        scene_root = camera.get_top();
+      }
+      strm << scene_root.get_name();
+    }
+  }
+
+  // And add the index in case we have two scene graphs with the same name.
+  strm << "#" << index;
+
+  _debug_name = strm.str();
+#endif
+
+#ifdef DO_PSTATS
+  _cull_region_pcollector = PStatCollector(_window->get_cull_window_pcollector(), _debug_name);
+  _draw_region_pcollector = PStatCollector(_window->get_draw_window_pcollector(), _debug_name);
 #endif  // DO_PSTATS
 }
 

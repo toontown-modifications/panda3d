@@ -16,15 +16,15 @@
 
 #include "ffmpegAudio.h"
 extern "C" {
-  #include "libavutil/dict.h"
-  #include "libavutil/opt.h"
-  #include "libavcodec/avcodec.h"
-  #include "libavformat/avformat.h"
+  #include <libavutil/dict.h>
+  #include <libavutil/opt.h>
+  #include <libavcodec/avcodec.h>
+  #include <libavformat/avformat.h>
 }
 
 #ifdef HAVE_SWRESAMPLE
 extern "C" {
-  #include "libswresample/swresample.h"
+  #include <libswresample/swresample.h>
 }
 #endif
 
@@ -210,6 +210,23 @@ FfmpegAudioCursor::
  */
 void FfmpegAudioCursor::
 cleanup() {
+  if (_audio_ctx && _audio_ctx->codec) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
+    // We need to drain the codec to prevent a memory leak.
+    avcodec_send_packet(_audio_ctx, nullptr);
+    while (avcodec_receive_frame(_audio_ctx, _frame) == 0) {}
+    avcodec_flush_buffers(_audio_ctx);
+#endif
+
+    avcodec_close(_audio_ctx);
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 52, 0)
+    avcodec_free_context(&_audio_ctx);
+#else
+    delete _audio_ctx;
+#endif
+  }
+  _audio_ctx = nullptr;
+
   if (_frame) {
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 45, 101)
     av_frame_free(&_frame);
@@ -236,16 +253,6 @@ cleanup() {
     _buffer_alloc = nullptr;
     _buffer = nullptr;
   }
-
-  if ((_audio_ctx)&&(_audio_ctx->codec)) {
-    avcodec_close(_audio_ctx);
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 52, 0)
-    avcodec_free_context(&_audio_ctx);
-#else
-    delete _audio_ctx;
-#endif
-  }
-  _audio_ctx = nullptr;
 
   if (_format_ctx) {
     _ffvfile.close();
@@ -307,7 +314,7 @@ reload_buffer() {
 
   // First, let's fill the codec's input buffer with as many packets as it'll
   // take:
-  int ret;
+  int ret = 0;
   while (_packet->data != nullptr) {
     ret = avcodec_send_packet(_audio_ctx, _packet);
 

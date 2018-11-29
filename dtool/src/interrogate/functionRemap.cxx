@@ -32,6 +32,10 @@
 #include "interrogateType.h"
 #include "pnotify.h"
 
+using std::ostream;
+using std::ostringstream;
+using std::string;
+
 /**
  *
  */
@@ -250,14 +254,13 @@ call_function(ostream &out, int indent_level, bool convert_result,
                                                            &parser);
         out << " = " << call << ";\n";
 
-        // MOVE() expands to std::move() when we are compiling with a compiler
-        // that supports rvalue references.  It basically turns an lvalue into
+        // Use of the C++11 std::move function basically turns an lvalue into
         // an rvalue, allowing a move constructor to be called instead of a
         // copy constructor (since we won't be using the return value any
         // more), which is usually more efficient if it exists.  If it
         // doesn't, it shouldn't do any harm.
         string new_str =
-          _return_type->prepare_return_expr(out, indent_level, "MOVE(result)");
+          _return_type->prepare_return_expr(out, indent_level, "std::move(result)");
         return_expr = _return_type->get_return_expr(new_str);
 
       } else {
@@ -439,7 +442,10 @@ get_call_str(const string &container, const vector_string &pexprs) const {
         call << ")." << _cppfunc->get_local_name();
 
       } else {
-        call << _cppfunc->get_local_name(&parser);
+        if (_cpptype != nullptr) {
+          call << _cpptype->get_local_name(&parser);
+        }
+        call << "::" << _cppfunc->get_local_name();
       }
     }
     call << "(";
@@ -954,8 +960,13 @@ setup_properties(const InterrogateFunction &ifunc, InterfaceMaker *interface_mak
 
     } else if (!_has_this && _parameters.size() > 0 &&
                (_cppfunc->_storage_class & CPPInstance::SC_explicit) == 0) {
-      // A non-explicit non-copy constructor might be eligible for coercion.
-      _flags |= F_coerce_constructor;
+      // A non-explicit non-copy constructor might be eligible for coercion,
+      // as long as it does not require explicit keyword args.
+      if ((_flags & F_explicit_args) == 0 ||
+          _args_type != InterfaceMaker::AT_keyword_args) {
+
+        _flags |= F_coerce_constructor;
+      }
     }
 
     // Constructors always take varargs, and possibly keyword args.

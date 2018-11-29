@@ -33,6 +33,9 @@
 #define ALC_ALL_DEVICES_SPECIFIER 0x1013
 #endif
 
+using std::endl;
+using std::string;
+
 TypeHandle OpenALAudioManager::_type_handle;
 
 ReMutex OpenALAudioManager::_lock;
@@ -486,7 +489,7 @@ get_sound(MovieAudio *sound, bool positional, int mode) {
  * This is what creates a sound instance.
  */
 PT(AudioSound) OpenALAudioManager::
-get_sound(const string &file_name, bool positional, int mode) {
+get_sound(const Filename &file_name, bool positional, int mode) {
   ReMutexHolder holder(_lock);
   if(!is_valid()) {
     return get_null_sound();
@@ -522,7 +525,7 @@ get_sound(const string &file_name, bool positional, int mode) {
  * use, then the sound cannot be deleted, and this function has no effect.
  */
 void OpenALAudioManager::
-uncache_sound(const string& file_name) {
+uncache_sound(const Filename &file_name) {
   ReMutexHolder holder(_lock);
   nassertv(is_valid());
   Filename path = file_name;
@@ -531,6 +534,9 @@ uncache_sound(const string& file_name) {
   vfs->resolve_filename(path, get_model_path());
 
   SampleCache::iterator sci = _sample_cache.find(path);
+  if (sci == _sample_cache.end()) {
+    sci = _sample_cache.find(file_name);
+  }
   if (sci != _sample_cache.end()) {
     SoundData *sd = (*sci).second;
     if (sd->_client_count == 0) {
@@ -538,6 +544,20 @@ uncache_sound(const string& file_name) {
       _sample_cache.erase(sci);
       delete sd;
     }
+  }
+
+  ExpirationQueue::iterator exqi;
+  for (exqi = _expiring_streams.begin(); exqi != _expiring_streams.end();) {
+    SoundData *sd = (SoundData *)(*exqi);
+    if (sd->_client_count == 0) {
+      if (sd->_movie->get_filename() == path ||
+          sd->_movie->get_filename() == file_name) {
+        exqi = _expiring_streams.erase(exqi);
+        delete sd;
+        continue;
+      }
+    }
+    ++exqi;
   }
 }
 

@@ -22,11 +22,16 @@
 // Include this before everything
 #include "pandatoolbase.h"
 
-// MAX includes
+using std::min;
+using std::max;
+
+// local includes
 #include "maxEggLoader.h"
-#include "Max.h"
 #include "maxImportRes.h"
-#include "istdplug.h"
+
+// MAX includes
+#include <Max.h>
+#include <istdplug.h>
 
 // panda includes.
 #include "notifyCategoryProxy.h"
@@ -198,7 +203,7 @@ DoImport(const TCHAR *name, ImpInterface *ii, Interface *i, BOOL suppressPrompts
   bool ok = MaxLoadEggFile(name, _merge ? true:false, _importmodel ? true:false, _importanim ? true:false);
 #endif
 
-  string txt = log.str();
+  std::string txt = log.str();
   if (txt != "") {
     MessageBoxA(nullptr, txt.c_str(), "Panda3D Importer", MB_OK);
   } else if (!ok) {

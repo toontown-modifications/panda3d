@@ -100,6 +100,10 @@
 #include <ctype.h>
 #include <algorithm>
 
+using std::max;
+using std::min;
+using std::string;
+
 // This class is used in make_node(EggBin *) to sort LOD instances in order by
 // switching distance.
 class LODInstance {
@@ -2584,7 +2588,7 @@ make_primitive(const EggRenderState *render_state, EggPrimitive *egg_prim,
   // Insert the primitive into the set, but if we already have a primitive of
   // that type, reset the pointer to that one instead.
   PrimitiveUnifier pu(primitive);
-  pair<UniquePrimitives::iterator, bool> result =
+  std::pair<UniquePrimitives::iterator, bool> result =
     unique_primitives.insert(UniquePrimitives::value_type(pu, primitive));
 
   if (result.second) {
@@ -2657,7 +2661,6 @@ set_occluder_polygon(EggGroup *egg_group, OccluderNode *pnode) {
     } else {
       LMatrix4d mat = poly->get_vertex_to_node();
 
-      EggPolygon::const_iterator vi;
       LPoint3d v0 = (*poly)[0]->get_pos3() * mat;
       LPoint3d v1 = (*poly)[1]->get_pos3() * mat;
       LPoint3d v2 = (*poly)[2]->get_pos3() * mat;

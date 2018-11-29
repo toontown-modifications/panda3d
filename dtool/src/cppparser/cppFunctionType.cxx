@@ -16,6 +16,10 @@
 #include "cppSimpleType.h"
 #include "cppInstance.h"
 
+using std::ostream;
+using std::ostringstream;
+using std::string;
+
 /**
  *
  */
@@ -287,6 +291,10 @@ output_instance(ostream &out, int indent_level, CPPScope *scope,
     }
 
     out << str;
+
+  } else if (_flags & F_operator_typecast) {
+    out << "operator ";
+    _return_type->output_instance(out, indent_level, scope, complete, "", prename + str);
 
   } else {
     if (prename.empty()) {

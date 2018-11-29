@@ -24,11 +24,14 @@
 #include PRC_PUBLIC_KEYS_INCLUDE
 #endif
 
-#include "openssl/rsa.h"
-#include "openssl/err.h"
-#include "openssl/pem.h"
-#include "openssl/rand.h"
-#include "openssl/bio.h"
+#include <openssl/rsa.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+#include <openssl/rand.h>
+#include <openssl/bio.h>
+
+using std::cerr;
+using std::string;
 
 class KeyNumber {
 public:
@@ -69,7 +72,7 @@ output_ssl_errors() {
  * string.
  */
 void
-output_c_string(ostream &out, const string &string_name,
+output_c_string(std::ostream &out, const string &string_name,
                 size_t index, BIO *mbio) {
   char *data_ptr;
   size_t data_size = BIO_get_mem_data(mbio, &data_ptr);
@@ -94,8 +97,8 @@ output_c_string(ostream &out, const string &string_name,
         out << data_ptr[i];
 
       } else {
-        out << "\\x" << hex << setw(2) << setfill('0')
-            << (unsigned int)(unsigned char)data_ptr[i] << dec;
+        out << "\\x" << std::hex << std::setw(2) << std::setfill('0')
+            << (unsigned int)(unsigned char)data_ptr[i] << std::dec;
       }
     }
   }
@@ -456,7 +459,7 @@ main(int argc, char **argv) {
     EVP_PKEY *pkey = generate_key();
     PrcKeyRegistry::get_global_ptr()->set_key(n, pkey, now);
 
-    ostringstream strm;
+    std::ostringstream strm;
     if (got_hash || n != 1) {
       // If we got an explicit hash mark, we always output the number.  If we
       // did not get an explicit hash mark, we output the number only if it is

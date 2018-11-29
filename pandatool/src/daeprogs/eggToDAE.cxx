@@ -15,9 +15,9 @@
 #include "dcast.h"
 #include "pandaVersion.h"
 
-#include "FCDocument/FCDocument.h"
-#include "FCDocument/FCDAsset.h"
-#include "FCDocument/FCDTransform.h"
+#include <FCDocument/FCDocument.h>
+#include <FCDocument/FCDAsset.h>
+#include <FCDocument/FCDTransform.h>
 
 // Useful conversion stuff
 #define TO_VEC3(v) (LVecBase3d(v[0], v[1], v[2]))
@@ -27,6 +27,8 @@
 #define FROM_VEC4(v) (FMVector4(v[0], v[1], v[2], v[3]))
 #define FROM_MAT4(v) (FMMatrix44(v.get_data()))
 #define FROM_FSTRING(fs) (fs.c_str())
+
+using std::cerr;
 
 /**
  *

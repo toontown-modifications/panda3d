@@ -11,7 +11,12 @@
  * @date 2010-06-11
  */
 
+#include "webcamVideoCursorV4L.h"
+
+#include "config_vision.h"
 #include "webcamVideoV4L.h"
+
+#include "movieVideoCursor.h"
 
 #if defined(HAVE_VIDEO4LINUX) && !defined(CPPPARSER)
 
@@ -30,7 +35,7 @@ extern "C" {
 
 TypeHandle WebcamVideoCursorV4L::_type_handle;
 
-#define clamp(x) min(max(x, 0.0), 255.0)
+#define clamp(x) std::min(std::max(x, 0.0), 255.0)
 
 INLINE static void yuv_to_bgr(unsigned char *dest, const unsigned char *src) {
   double y1 = (255 / 219.0) * (src[0] - 16);
@@ -482,7 +487,8 @@ fetch_buffer() {
       block[i + 2] = ex;
     }
 #else
-    nassertr(false /* Not compiled with JPEG support*/, nullptr);
+    nassert_raise("JPEG support not compiled-in");
+    return nullptr;
 #endif
     break;
   }

@@ -41,7 +41,7 @@ apply_transform_and_state(CullTraverser *trav) {
     // camera.  This indicates some special state transition for this node,
     // which is unique to this camera.
     const Camera *camera = trav->get_scene()->get_camera_node();
-    string tag_state = _node_reader.get_tag(trav->get_tag_state_key());
+    std::string tag_state = _node_reader.get_tag(trav->get_tag_state_key());
     node_state = node_state->compose(camera->get_tag_state(tag_state));
   }
   _node_reader.compose_draw_mask(_draw_mask);
@@ -54,6 +54,9 @@ apply_transform_and_state(CullTraverser *trav) {
     CPT(TransformState) node_transform = _node_reader.get_transform();
     node_effects->cull_callback(trav, *this, node_transform, node_state);
     apply_transform(node_transform);
+
+    // The cull callback may have changed the node properties.
+    _node_reader.check_cached(false);
   }
 
   if (!node_state->is_empty()) {
@@ -154,7 +157,7 @@ is_in_view_impl() {
 
     if (pgraph_cat.is_spam()) {
       pgraph_cat.spam()
-        << get_node_path() << " cull result = " << hex << result << dec << "\n";
+        << get_node_path() << " cull result = " << std::hex << result << std::dec << "\n";
     }
 
     if (result == BoundingVolume::IF_no_intersection) {
@@ -202,8 +205,8 @@ is_in_view_impl() {
 
     if (pgraph_cat.is_spam()) {
       pgraph_cat.spam()
-        << get_node_path() << " cull planes cull result = " << hex
-        << result << dec << "\n";
+        << get_node_path() << " cull planes cull result = " << std::hex
+        << result << std::dec << "\n";
       _cull_planes->write(pgraph_cat.spam(false));
     }
 

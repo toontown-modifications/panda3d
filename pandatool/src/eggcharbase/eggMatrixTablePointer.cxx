@@ -12,10 +12,14 @@
  */
 
 #include "eggMatrixTablePointer.h"
+
 #include "dcast.h"
+#include "eggCharacterDb.h"
 #include "eggSAnimData.h"
 #include "eggXfmAnimData.h"
 #include "eggXfmSAnim.h"
+
+using std::string;
 
 TypeHandle EggMatrixTablePointer::_type_handle;
 

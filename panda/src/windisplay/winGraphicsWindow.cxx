@@ -37,6 +37,9 @@
 // Not used on Windows XP, but we still need to define it.
 #define TOUCH_COORD_TO_PIXEL(l) ((l) / 100)
 
+using std::endl;
+using std::wstring;
+
 DECLARE_HANDLE(HTOUCHINPUT);
 #endif
 
@@ -82,7 +85,7 @@ static PFN_CLOSETOUCHINPUTHANDLE pCloseTouchInputHandle = 0;
  */
 WinGraphicsWindow::
 WinGraphicsWindow(GraphicsEngine *engine, GraphicsPipe *pipe,
-                  const string &name,
+                  const std::string &name,
                   const FrameBufferProperties &fb_prop,
                   const WindowProperties &win_prop,
                   int flags,
@@ -115,6 +118,30 @@ WinGraphicsWindow::
   if (_window_handle != nullptr) {
     DCAST(WinWindowHandle, _window_handle)->clear_window();
   }
+}
+
+/**
+ * Returns the MouseData associated with the nth input device's pointer.
+ */
+MouseData WinGraphicsWindow::
+get_pointer(int device) const {
+  MouseData result;
+  {
+    LightMutexHolder holder(_input_lock);
+    nassertr(device >= 0 && device < (int)_input_devices.size(), MouseData());
+
+    result = _input_devices[device].get_pointer();
+
+    // We recheck this immediately to get the most up-to-date value.
+    POINT cpos;
+    if (device == 0 && result._in_window && GetCursorPos(&cpos) && ScreenToClient(_hWnd, &cpos)) {
+      double time = ClockObject::get_global_clock()->get_real_time();
+      result._xpos = cpos.x;
+      result._ypos = cpos.y;
+      ((GraphicsWindowInputDevice &)_input_devices[0]).set_pointer(result._in_window, result._xpos, result._ypos, time);
+    }
+  }
+  return result;
 }
 
 /**
@@ -256,8 +283,43 @@ set_properties_now(WindowProperties &properties) {
     return;
   }
 
+  if (properties.has_undecorated() ||
+      properties.has_fixed_size()) {
+    if (properties.has_undecorated()) {
+      _properties.set_undecorated(properties.get_undecorated());
+      properties.clear_undecorated();
+    }
+    if (properties.has_fixed_size()) {
+      _properties.set_fixed_size(properties.get_fixed_size());
+      properties.clear_fixed_size();
+    }
+    // When switching undecorated mode, Windows will keep the window at the
+    // current outer size, whereas we want to keep it with the configured
+    // inner size.  Store the current size and origin.
+    LPoint2i top_left = _properties.get_origin();
+    LPoint2i bottom_right = top_left + _properties.get_size();
+
+    DWORD window_style = make_style(_properties);
+    SetWindowLong(_hWnd, GWL_STYLE, window_style);
+
+    // Now calculate the proper size and origin with the new window style.
+    RECT view_rect;
+    SetRect(&view_rect, top_left[0], top_left[1],
+            bottom_right[0], bottom_right[1]);
+    WINDOWINFO wi;
+    GetWindowInfo(_hWnd, &wi);
+    AdjustWindowRectEx(&view_rect, wi.dwStyle, FALSE, wi.dwExStyle);
+
+    // We need to call this to ensure that the style change takes effect.
+    SetWindowPos(_hWnd, HWND_NOTOPMOST, view_rect.left, view_rect.top,
+                 view_rect.right - view_rect.left,
+                 view_rect.bottom - view_rect.top,
+                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED |
+                 SWP_NOSENDCHANGING | SWP_SHOWWINDOW);
+  }
+
   if (properties.has_title()) {
-    string title = properties.get_title();
+    std::string title = properties.get_title();
     _properties.set_title(title);
     TextEncoder encoder;
     wstring title_w = encoder.decode_text(title);
@@ -460,7 +522,7 @@ open_window() {
   // CreateWindow() and know which window it is sending events to even before
   // it gives us a handle.  Warning: this is not thread safe!
   _creating_window = this;
-  bool opened = open_graphic_window(is_fullscreen());
+  bool opened = open_graphic_window();
   _creating_window = nullptr;
 
   if (!opened) {
@@ -838,7 +900,9 @@ do_fullscreen_switch() {
     return false;
   }
 
-  DWORD window_style = make_style(true);
+  WindowProperties props(_properties);
+  props.set_fullscreen(true);
+  DWORD window_style = make_style(props);
   SetWindowLong(_hWnd, GWL_STYLE, window_style);
 
   WINDOW_METRICS metrics;
@@ -858,7 +922,10 @@ do_fullscreen_switch() {
 bool WinGraphicsWindow::
 do_windowed_switch() {
   do_fullscreen_disable();
-  DWORD window_style = make_style(false);
+
+  WindowProperties props(_properties);
+  props.set_fullscreen(false);
+  DWORD window_style = make_style(props);
   SetWindowLong(_hWnd, GWL_STYLE, window_style);
 
   WINDOW_METRICS metrics;
@@ -901,7 +968,7 @@ support_overlay_window(bool) {
  * Constructs a dwStyle for the specified mode, be it windowed or fullscreen.
  */
 DWORD WinGraphicsWindow::
-make_style(bool fullscreen) {
+make_style(const WindowProperties &properties) {
   // from MSDN: An OpenGL window has its own pixel format.  Because of this,
   // only device contexts retrieved for the client area of an OpenGL window
   // are allowed to draw into the window.  As a result, an OpenGL window
@@ -911,7 +978,7 @@ make_style(bool fullscreen) {
 
   DWORD window_style = WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 
-  if (fullscreen){
+  if (_properties.get_fullscreen()) {
     window_style |= WS_SYSMENU;
   } else if (!_properties.get_undecorated()) {
     window_style |= (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX);
@@ -988,8 +1055,8 @@ calculate_metrics(bool fullscreen, DWORD window_style, WINDOW_METRICS &metrics,
  * Creates a regular or fullscreen window.
  */
 bool WinGraphicsWindow::
-open_graphic_window(bool fullscreen) {
-  DWORD window_style = make_style(fullscreen);
+open_graphic_window() {
+  DWORD window_style = make_style(_properties);
 
   wstring title;
   if (_properties.has_title()) {
@@ -1359,7 +1426,7 @@ window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     // This is a message from the system indicating that the user has
     // requested to close the window (e.g.  alt-f4).
     {
-      string close_request_event = get_close_request_event();
+      std::string close_request_event = get_close_request_event();
       if (!close_request_event.empty()) {
         // In this case, the app has indicated a desire to intercept the
         // request and process it directly.
@@ -1724,8 +1791,8 @@ window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         size_t num_chars = result_size / sizeof(wchar_t);
 
         _input_devices[0].candidate(wstring(ime_buffer, num_chars),
-                                    min(cursor_pos, delta_start),
-                                    max(cursor_pos, delta_start),
+                                    std::min(cursor_pos, delta_start),
+                                    std::max(cursor_pos, delta_start),
                                     cursor_pos);
       }
       ImmReleaseContext(hwnd, hIMC);
@@ -2159,12 +2226,12 @@ update_cursor_window(WinGraphicsWindow *to_window) {
     // We are leaving a graphics window; we should restore the Win2000
     // effects.
     if (_got_saved_params) {
-      SystemParametersInfo(SPI_SETMOUSETRAILS, 0,
-                           (PVOID)_saved_mouse_trails, 0);
+      SystemParametersInfo(SPI_SETMOUSETRAILS, _saved_mouse_trails,
+                           0, 0);
       SystemParametersInfo(SPI_SETCURSORSHADOW, 0,
-                           (PVOID)_saved_cursor_shadow, 0);
+                           _saved_cursor_shadow ? (PVOID)1 : nullptr, 0);
       SystemParametersInfo(SPI_SETMOUSEVANISH, 0,
-                           (PVOID)_saved_mouse_vanish, 0);
+                           _saved_mouse_vanish ? (PVOID)1 : nullptr, 0);
       _got_saved_params = false;
     }
 
@@ -2829,7 +2896,7 @@ register_window_class(const WindowProperties &props) {
   wclass_name << L"WinGraphicsWindow" << _window_class_index;
   wcreg._name = wclass_name.str();
 
-  pair<WindowClasses::iterator, bool> found = _window_classes.insert(wcreg);
+  std::pair<WindowClasses::iterator, bool> found = _window_classes.insert(wcreg);
   const WindowClass &wclass = (*found.first);
 
   if (!found.second) {

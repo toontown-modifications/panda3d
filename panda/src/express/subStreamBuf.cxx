@@ -15,6 +15,11 @@
 #include "pnotify.h"
 #include "memoryHook.h"
 
+using std::ios;
+using std::streamoff;
+using std::streampos;
+using std::streamsize;
+
 static const size_t substream_buffer_size = 4096;
 
 /**
@@ -83,6 +88,13 @@ open(IStreamWrapper *source, OStreamWrapper *dest, streampos start, streampos en
   _append = append;
   _gpos = _start;
   _ppos = _start;
+
+  if (source != nullptr) {
+    source->ref();
+  }
+  if (dest != nullptr) {
+    dest->ref();
+  }
 }
 
 /**
@@ -93,6 +105,12 @@ close() {
   // Make sure the write buffer is flushed.
   sync();
 
+  if (_source != nullptr && !_source->unref()) {
+    delete _source;
+  }
+  if (_dest != nullptr && !_dest->unref()) {
+    delete _dest;
+  }
   _source = nullptr;
   _dest = nullptr;
   _start = 0;

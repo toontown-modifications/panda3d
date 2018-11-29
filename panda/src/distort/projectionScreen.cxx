@@ -30,7 +30,7 @@ TypeHandle ProjectionScreen::_type_handle;
  *
  */
 ProjectionScreen::
-ProjectionScreen(const string &name) : PandaNode(name)
+ProjectionScreen(const std::string &name) : PandaNode(name)
 {
   set_cull_callback();
 
@@ -151,7 +151,7 @@ set_projector(const NodePath &projector) {
  * fraction, and make the screen smaller by the inverse fraction.
  */
 PT(GeomNode) ProjectionScreen::
-generate_screen(const NodePath &projector, const string &screen_name,
+generate_screen(const NodePath &projector, const std::string &screen_name,
                 int num_x_verts, int num_y_verts, PN_stdfloat distance,
                 PN_stdfloat fill_ratio) {
   nassertr(!projector.is_empty() &&
@@ -237,7 +237,7 @@ generate_screen(const NodePath &projector, const string &screen_name,
  * generated child returned by generate_screen().
  */
 void ProjectionScreen::
-regenerate_screen(const NodePath &projector, const string &screen_name,
+regenerate_screen(const NodePath &projector, const std::string &screen_name,
                   int num_x_verts, int num_y_verts, PN_stdfloat distance,
                   PN_stdfloat fill_ratio) {
   // First, remove all existing children.
@@ -484,8 +484,7 @@ recompute_geom(Geom *geom, const LMatrix4 &rel_mat) {
   const LMatrix4 &to_uv = _invert_uvs ? lens_to_uv_inverted : lens_to_uv;
 
   // Iterate through all the vertices in the Geom.
-  CPT(GeomVertexData) vdata = geom->get_vertex_data(current_thread);
-  vdata = vdata->animate_vertices(true, current_thread);
+  CPT(GeomVertexData) vdata = geom->get_animated_vertex_data(true, current_thread);
 
   CPT(GeomVertexFormat) vformat = vdata->get_format();
   if (!vformat->has_column(_texcoord_name) || (_texcoord_3d && vformat->get_column(_texcoord_name)->get_num_components() < 3)) {
@@ -507,7 +506,7 @@ recompute_geom(Geom *geom, const LMatrix4 &rel_mat) {
   PT(GeomVertexData) modify_vdata = geom->modify_vertex_data();
 
   // Maybe the vdata has animation that we should consider.
-  CPT(GeomVertexData) animated_vdata = geom->get_vertex_data(current_thread)->animate_vertices(true, current_thread);
+  CPT(GeomVertexData) animated_vdata = geom->get_animated_vertex_data(true, current_thread);
 
   GeomVertexWriter texcoord(modify_vdata, _texcoord_name, current_thread);
   GeomVertexWriter color(modify_vdata, current_thread);
@@ -674,9 +673,8 @@ make_mesh_geom(const Geom *geom, Lens *lens, LMatrix4 &rel_mat) {
 
   Thread *current_thread = Thread::get_current_thread();
   PT(Geom) new_geom = geom->make_copy();
+  new_geom->set_vertex_data(new_geom->get_animated_vertex_data(false, current_thread));
   PT(GeomVertexData) vdata = new_geom->modify_vertex_data();
-  new_geom->set_vertex_data(vdata->animate_vertices(false, current_thread));
-  vdata = new_geom->modify_vertex_data();
   GeomVertexRewriter vertex(vdata, InternalName::get_vertex());
   while (!vertex.is_at_end()) {
     LVertex vert = vertex.get_data3();

@@ -172,7 +172,7 @@ private:
   typedef pvector<PartBundleNode *> Nodes;
   Nodes _nodes;
 
-  typedef pmap<WCPT(TransformState), WPT(PartBundle) > AppliedTransforms;
+  typedef pmap<WCPT(TransformState), WPT(PartBundle), std::owner_less<WCPT(TransformState)> > AppliedTransforms;
   AppliedTransforms _applied_transforms;
 
   double _update_delay;
@@ -248,8 +248,8 @@ inline std::ostream &operator <<(std::ostream &out, const PartBundle &bundle) {
   return out;
 }
 
-std::ostream &operator <<(std::ostream &out, PartBundle::BlendType blend_type);
-std::istream &operator >>(std::istream &in, PartBundle::BlendType &blend_type);
+EXPCL_PANDA_CHAN std::ostream &operator <<(std::ostream &out, PartBundle::BlendType blend_type);
+EXPCL_PANDA_CHAN std::istream &operator >>(std::istream &in, PartBundle::BlendType &blend_type);
 
 #include "partBundle.I"
 

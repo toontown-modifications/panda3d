@@ -28,6 +28,19 @@
 
 #include "openSSLWrapper.h"
 
+using std::ios;
+using std::iostream;
+using std::istream;
+using std::max;
+using std::min;
+using std::ostream;
+using std::ostringstream;
+using std::streamoff;
+using std::streampos;
+using std::streamsize;
+using std::stringstream;
+using std::string;
+
 // This sequence of bytes begins each Multifile to identify it as a Multifile.
 const char Multifile::_header[] = "pmf\0\n\r";
 const size_t Multifile::_header_size = 6;
@@ -320,7 +333,10 @@ close() {
   if (_owns_stream) {
     // We prefer to delete the IStreamWrapper over the ostream, if possible.
     if (_read != nullptr) {
-      delete _read;
+      // Only delete it if no SubStream is still referencing it.
+      if (!_read->unref()) {
+        delete _read;
+      }
     } else if (_write != nullptr) {
       delete _write;
     }
@@ -1997,7 +2013,7 @@ add_new_subfile(Subfile *subfile, int compression_level) {
     _needs_repack = true;
   }
 
-  pair<Subfiles::iterator, bool> insert_result = _subfiles.insert(subfile);
+  std::pair<Subfiles::iterator, bool> insert_result = _subfiles.insert(subfile);
   if (!insert_result.second) {
     // Hmm, unable to insert.  There must already be a subfile by that name.
     // Remove the old one.

@@ -116,7 +116,7 @@ make(LightAttrib::Operation op, Light *light) {
     return attrib;
   }
 
-  nassertr(false, make());
+  nassert_raise("invalid operation");
   return make();
 }
 
@@ -154,7 +154,7 @@ make(LightAttrib::Operation op, Light *light1, Light *light2) {
     return attrib;
   }
 
-  nassertr(false, make());
+  nassert_raise("invalid operation");
   return make();
 }
 
@@ -196,7 +196,7 @@ make(LightAttrib::Operation op, Light *light1, Light *light2,
     return attrib;
   }
 
-  nassertr(false, make());
+  nassert_raise("invalid operation");
   return make();
 }
 
@@ -241,7 +241,7 @@ make(LightAttrib::Operation op, Light *light1, Light *light2,
     return attrib;
   }
 
-  nassertr(false, make());
+  nassert_raise("invalid operation");
   return make();
 }
 
@@ -420,7 +420,7 @@ add_on_light(const NodePath &light) const {
 
   LightAttrib *attrib = new LightAttrib(*this);
 
-  pair<Lights::iterator, bool> insert_result =
+  std::pair<Lights::iterator, bool> insert_result =
     attrib->_on_lights.insert(Lights::value_type(light));
   if (insert_result.second) {
     lobj->attrib_ref();
@@ -523,7 +523,7 @@ get_ambient_contribution() const {
  *
  */
 void LightAttrib::
-output(ostream &out) const {
+output(std::ostream &out) const {
   out << get_type() << ":";
   if (_off_lights.empty()) {
     if (_on_lights.empty()) {
@@ -572,7 +572,7 @@ output(ostream &out) const {
  *
  */
 void LightAttrib::
-write(ostream &out, int indent_level) const {
+write(std::ostream &out, int indent_level) const {
   indent(out, indent_level) << get_type() << ":";
   if (_off_lights.empty()) {
     if (_on_lights.empty()) {

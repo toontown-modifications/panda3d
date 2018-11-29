@@ -12,6 +12,7 @@
  */
 
 #include "xFileMesh.h"
+#include "xFileToEggConverter.h"
 #include "xFileFace.h"
 #include "xFileVertex.h"
 #include "xFileNormal.h"
@@ -22,7 +23,11 @@
 #include "eggVertexPool.h"
 #include "eggVertex.h"
 #include "eggPolygon.h"
+#include "eggGroup.h"
 #include "eggGroupNode.h"
+
+using std::min;
+using std::string;
 
 /**
  *
@@ -111,7 +116,7 @@ add_vertex(EggVertex *egg_vertex, EggPrimitive *egg_prim) {
     _has_uvs = true;
   }
 
-  pair<UniqueVertices::iterator, bool> result =
+  std::pair<UniqueVertices::iterator, bool> result =
     _unique_vertices.insert(UniqueVertices::value_type(vertex, next_index));
 
   if (result.second) {
@@ -140,7 +145,7 @@ add_normal(EggVertex *egg_vertex, EggPrimitive *egg_prim) {
     _has_normals = true;
   }
 
-  pair<UniqueNormals::iterator, bool> result =
+  std::pair<UniqueNormals::iterator, bool> result =
     _unique_normals.insert(UniqueNormals::value_type(normal, next_index));
 
   if (result.second) {
@@ -168,7 +173,7 @@ add_material(EggPrimitive *egg_prim) {
     _has_materials = true;
   }
 
-  pair<UniqueMaterials::iterator, bool> result =
+  std::pair<UniqueMaterials::iterator, bool> result =
     _unique_materials.insert(UniqueMaterials::value_type(material, next_index));
 
   if (result.second) {

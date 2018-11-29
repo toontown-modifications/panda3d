@@ -45,7 +45,9 @@ has_column(const InternalName *name) const {
  */
 INLINE int GeomVertexArrayData::
 get_num_rows() const {
-  return get_handle()->get_num_rows();
+  CDReader cdata(_cycler);
+  nassertr(_array_format->get_stride() != 0, 0);
+  return cdata->_buffer.get_size() / _array_format->get_stride();
 }
 
 /**
@@ -518,10 +520,11 @@ prepare_now(PreparedGraphicsObjects *prepared_objects,
  * a string.  This is primarily for the benefit of high-level languages such
  * as Python.
  */
-INLINE std::string GeomVertexArrayDataHandle::
+INLINE vector_uchar GeomVertexArrayDataHandle::
 get_data() const {
   mark_used();
-  return std::string((const char *)_cdata->_buffer.get_read_pointer(true), _cdata->_buffer.get_size());
+  const unsigned char *ptr = _cdata->_buffer.get_read_pointer(true);
+  return vector_uchar(ptr, ptr + _cdata->_buffer.get_size());
 }
 
 /**
@@ -529,12 +532,13 @@ get_data() const {
  * formatted as a string.  This is primarily for the benefit of high-level
  * languages such as Python.
  */
-INLINE std::string GeomVertexArrayDataHandle::
+INLINE vector_uchar GeomVertexArrayDataHandle::
 get_subdata(size_t start, size_t size) const {
   mark_used();
   start = std::min(start, _cdata->_buffer.get_size());
   size = std::min(size, _cdata->_buffer.get_size() - start);
-  return std::string((const char *)_cdata->_buffer.get_read_pointer(true) + start, size);
+  const unsigned char *ptr = _cdata->_buffer.get_read_pointer(true) + start;
+  return vector_uchar(ptr, ptr + size);
 }
 
 /**

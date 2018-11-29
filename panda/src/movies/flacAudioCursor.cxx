@@ -25,7 +25,7 @@ extern "C" {
  * Callback passed to dr_flac to implement file I/O via the VirtualFileSystem.
  */
 static size_t cb_read_proc(void *user, void *buffer, size_t size) {
-  istream *stream = (istream *)user;
+  std::istream *stream = (std::istream *)user;
   nassertr(stream != nullptr, false);
 
   stream->read((char *)buffer, size);
@@ -42,10 +42,10 @@ static size_t cb_read_proc(void *user, void *buffer, size_t size) {
  * Callback passed to dr_flac to implement file I/O via the VirtualFileSystem.
  */
 static bool cb_seek_proc(void *user, int offset) {
-  istream *stream = (istream *)user;
+  std::istream *stream = (std::istream *)user;
   nassertr(stream != nullptr, false);
 
-  stream->seekg(offset, ios::cur);
+  stream->seekg(offset, std::ios::cur);
   return !stream->fail();
 }
 
@@ -56,10 +56,11 @@ TypeHandle FlacAudioCursor::_type_handle;
  * pointer positioned at the start of the data.
  */
 FlacAudioCursor::
-FlacAudioCursor(FlacAudio *src, istream *stream) :
+FlacAudioCursor(FlacAudio *src, std::istream *stream) :
   MovieAudioCursor(src),
   _is_valid(false),
-  _drflac(nullptr)
+  _drflac(nullptr),
+  _stream(stream)
 {
   nassertv(stream != nullptr);
   nassertv(stream->good());
@@ -91,6 +92,9 @@ FlacAudioCursor::
   if (_drflac != nullptr) {
     drflac_close(_drflac);
   }
+  if (_stream != nullptr) {
+    VirtualFileSystem::close_read_file(_stream);
+  }
 }
 
 /**
@@ -99,7 +103,7 @@ FlacAudioCursor::
  */
 void FlacAudioCursor::
 seek(double t) {
-  t = max(t, 0.0);
+  t = std::max(t, 0.0);
 
   uint64_t sample = t * _drflac->sampleRate;
 

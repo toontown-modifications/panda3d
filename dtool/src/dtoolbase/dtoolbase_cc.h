@@ -49,6 +49,8 @@
 // interrogate pass (CPPPARSER isn't defined), this maps to public.
 #define PUBLISHED __published
 
+#define PHAVE_ATOMIC 1
+
 typedef int ios_openmode;
 typedef int ios_fmtflags;
 typedef int ios_iostate;
@@ -93,27 +95,6 @@ typedef std::ios::iostate ios_iostate;
 typedef std::ios::seekdir ios_seekdir;
 #endif
 
-// Apple has an outdated libstdc++.  Not all is lost, though, as we can fill
-// in some important missing functions.
-#if defined(__GLIBCXX__) && __GLIBCXX__ <= 20070719
-#include <tr1/tuple>
-
-namespace std {
-  using std::tr1::tuple;
-  using std::tr1::tie;
-
-  typedef decltype(nullptr) nullptr_t;
-
-  template<class T> struct remove_reference      {typedef T type;};
-  template<class T> struct remove_reference<T&>  {typedef T type;};
-  template<class T> struct remove_reference<T&& >{typedef T type;};
-
-  template<class T> typename remove_reference<T>::type &&move(T &&t) {
-    return static_cast<typename remove_reference<T>::type&&>(t);
-  }
-};
-#endif
-
 #ifdef _MSC_VER
 #define ALWAYS_INLINE __forceinline
 #elif defined(__GNUC__)
@@ -129,6 +110,62 @@ namespace std {
 #define INLINE ALWAYS_INLINE
 #else
 #define INLINE inline
+#endif
+
+// Apple has an outdated libstdc++.  Not all is lost, though, as we can fill
+// in some important missing functions.
+#if defined(__GLIBCXX__) && __GLIBCXX__ <= 20070719
+#include <tr1/tuple>
+#include <tr1/cmath>
+
+namespace std {
+  using std::tr1::tuple;
+  using std::tr1::tie;
+  using std::tr1::copysign;
+
+  typedef decltype(nullptr) nullptr_t;
+
+  template<class T> struct remove_reference      {typedef T type;};
+  template<class T> struct remove_reference<T&>  {typedef T type;};
+  template<class T> struct remove_reference<T&& >{typedef T type;};
+
+  template<class T> typename remove_reference<T>::type &&move(T &&t) {
+    return static_cast<typename remove_reference<T>::type&&>(t);
+  }
+
+  template<class T> struct owner_less;
+
+  typedef enum memory_order {
+    memory_order_relaxed,
+    memory_order_consume,
+    memory_order_acquire,
+    memory_order_release,
+    memory_order_acq_rel,
+    memory_order_seq_cst,
+  } memory_order;
+
+  #define ATOMIC_FLAG_INIT { 0 }
+  class atomic_flag {
+    bool _flag;
+
+  public:
+    atomic_flag() noexcept = default;
+    ALWAYS_INLINE constexpr atomic_flag(bool flag) noexcept : _flag(flag) {}
+    atomic_flag(const atomic_flag &) = delete;
+    ~atomic_flag() noexcept = default;
+    atomic_flag &operator = (const atomic_flag&) = delete;
+
+    ALWAYS_INLINE bool test_and_set(memory_order order = memory_order_seq_cst) noexcept {
+      return __atomic_test_and_set(&_flag, order);
+    }
+    ALWAYS_INLINE void clear(memory_order order = memory_order_seq_cst) noexcept {
+      __atomic_clear(&_flag, order);
+    }
+  };
+};
+#else
+// Expect that we have access to the <atomic> header.
+#define PHAVE_ATOMIC 1
 #endif
 
 // Determine the availability of C++11 features.
@@ -157,36 +194,6 @@ namespace std {
 #define PUBLISHED public
 
 #endif  // CPPPARSER
-
-// This was previously `using namespace std`, but we don't want to pull in the
-// entire namespace, so we enumerate the things we are using without std::
-// prefix in the Panda headers.  It is intended that this list will shrink.
-using std::cerr;
-using std::cin;
-using std::cout;
-using std::dec;
-using std::endl;
-using std::hex;
-using std::ios;
-using std::iostream;
-using std::istream;
-using std::istringstream;
-using std::max;
-using std::min;
-using std::move;
-using std::ostream;
-using std::ostringstream;
-using std::pair;
-using std::setfill;
-using std::setw;
-using std::streambuf;
-using std::streamoff;
-using std::streampos;
-using std::streamsize;
-using std::string;
-using std::stringstream;
-using std::swap;
-using std::wstring;
 
 // The ReferenceCount class is defined later, within Panda, but we need to
 // pass around forward references to it here at the very low level.
@@ -225,6 +232,15 @@ INLINE void thread_yield() {
 INLINE void thread_consider_yield() {
   (*global_thread_consider_yield)();
 }
+
+#ifdef HAVE_PYTHON
+typedef struct _ts PyThreadState;
+extern EXPCL_DTOOL_DTOOLBASE PyThreadState *(*global_thread_state_swap)(PyThreadState *tstate);
+
+INLINE PyThreadState *thread_state_swap(PyThreadState *tstate) {
+  return (*global_thread_state_swap)(tstate);
+}
+#endif  // HAVE_PYTHON
 
 #else
 

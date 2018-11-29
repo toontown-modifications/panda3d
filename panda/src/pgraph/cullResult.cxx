@@ -295,7 +295,10 @@ draw(Thread *current_thread) {
     nassertv(bin_index >= 0);
 
     if (bin_index < (int)_bins.size() && _bins[bin_index] != nullptr) {
+
+      _gsg->push_group_marker(_bins[bin_index]->get_name());
       _bins[bin_index]->draw(force, current_thread);
+      _gsg->pop_group_marker();
     }
   }
 }
@@ -359,7 +362,7 @@ make_new_bin(int bin_index) {
     nassertr(bin_index >= 0 && bin_index < (int)_bins.size(), nullptr);
 
     // Prevent unnecessary refunref by swapping the PointerTos.
-    swap(_bins[bin_index], bin);
+    std::swap(_bins[bin_index], bin);
   }
 
   return bin_ptr;

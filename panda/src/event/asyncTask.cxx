@@ -18,6 +18,8 @@
 #include "throw_event.h"
 #include "eventParameter.h"
 
+using std::string;
+
 AtomicAdjust::Integer AsyncTask::_next_task_id;
 PStatCollector AsyncTask::_show_code_pcollector("App:Show code");
 TypeHandle AsyncTask::_type_handle;
@@ -187,7 +189,7 @@ set_name(const string &name) {
   size_t end = name.size();
   size_t colon = name.find(':');
   if (colon != string::npos) {
-    end = min(end, colon);
+    end = std::min(end, colon);
   }
 
   // If the name ends with a hyphen followed by a string of digits, we strip
@@ -364,7 +366,7 @@ set_priority(int priority) {
  *
  */
 void AsyncTask::
-output(ostream &out) const {
+output(std::ostream &out) const {
   out << get_type();
   if (has_name()) {
     out << " " << get_name();
@@ -401,6 +403,9 @@ unlock_and_do_task() {
   Thread *current_thread = Thread::get_current_thread();
   nassertr(current_thread->_current_task == nullptr, DS_interrupt);
 
+#ifdef __GNUC__
+  __attribute__((unused))
+#endif
   void *ptr = AtomicAdjust::compare_and_exchange_ptr
     (current_thread->_current_task, nullptr, (TypedReferenceCount *)this);
 
@@ -427,7 +432,7 @@ unlock_and_do_task() {
   _manager->_lock.lock();
 
   _dt = end - start;
-  _max_dt = max(_dt, _max_dt);
+  _max_dt = std::max(_dt, _max_dt);
   _total_dt += _dt;
 
   _chain->_time_in_frame += _dt;
