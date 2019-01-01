@@ -197,6 +197,8 @@ var MANPAGE
         File /r "${BUILT}\pandac\input\*"
         SetOutPath $INSTDIR\Pmw
         File /nonfatal /r /x CVS "${BUILT}\Pmw\*"
+        SetOutPath $INSTDIR\panda3d.dist-info
+        File /nonfatal /r "${BUILT}\panda3d.dist-info\*"
 
         !ifdef REGVIEW
         SetRegView ${REGVIEW}
@@ -365,7 +367,7 @@ Section "Tools and utilities" SecTools
     SetDetailsPrint listonly
 
     SetOutPath "$INSTDIR\bin"
-    File /r "${BUILT}\bin\*.exe"
+    File /r /x deploy-stub.exe /x deploy-stubw.exe "${BUILT}\bin\*.exe"
     File /nonfatal /r "${BUILT}\bin\*.p3d"
     SetOutPath "$INSTDIR\NSIS"
     File /r /x CVS "${NSISDIR}\*"
@@ -401,8 +403,6 @@ SectionGroup "Python modules" SecGroupPython
 
         SetOutPath $INSTDIR\direct\directscripts
         File /r /x CVS /x Opt?-Win32 "${BUILT}\direct\directscripts\*"
-        SetOutPath $INSTDIR\direct\filter
-        File /r /x CVS /x Opt?-Win32 "${BUILT}\direct\filter\*.sha"
         SetOutPath $INSTDIR\direct
         File /r /x CVS /x Opt?-Win32 "${BUILT}\direct\*.py"
 

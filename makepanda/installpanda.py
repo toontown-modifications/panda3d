@@ -212,16 +212,22 @@ def InstallPanda(destdir="", prefix="/usr", outputdir="built", libdir=GetLibDir(
         pth_file = python_version["purelib"] + "/panda3d.pth"
         oscmd("echo '"+prefix+"/share/panda3d' > "+destdir+pth_file)
 
+        if os.path.isdir(outputdir+"/panda3d.dist-info"):
+            oscmd("cp -R "+outputdir+"/panda3d.dist-info "+destdir+python_version["platlib"])
+
     if (sys.platform.startswith("freebsd")):
         oscmd("echo '"+libdir+"/panda3d'>    "+destdir+"/usr/local/libdata/ldconfig/panda3d")
     else:
         oscmd("echo '"+libdir+"/panda3d'>    "+destdir+"/etc/ld.so.conf.d/panda3d.conf")
 
-    oscmd("cp "+outputdir+"/bin/*               "+destdir+prefix+"/bin/")
     for base in os.listdir(outputdir+"/lib"):
         if (not base.endswith(".a")) or base == "libp3pystub.a":
             # We really need to specify -R in order not to follow symlinks on non-GNU
             oscmd("cp -R -P "+outputdir+"/lib/"+base+" "+destdir+libdir+"/panda3d/"+base)
+
+    for base in os.listdir(outputdir+"/bin"):
+        if not base.startswith("deploy-stub"):
+            oscmd("cp -R -P "+outputdir+"/bin/"+base+" "+destdir+prefix+"/bin/"+base)
 
     DeleteVCS(destdir+prefix+"/share/panda3d")
     DeleteBuildFiles(destdir+prefix+"/share/panda3d")

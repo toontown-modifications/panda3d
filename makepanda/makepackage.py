@@ -512,9 +512,10 @@ def MakeInstallerOSX(version, runtime=False, python_versions=[], **kwargs):
     oscmd("install -m 0644 doc/man/*.1 dstroot/tools/usr/local/share/man/man1/")
 
     for base in os.listdir(outputdir+"/bin"):
-        binname = "dstroot/tools/Developer/Panda3D/bin/" + base
-        # OSX needs the -R argument to copy symbolic links correctly, it doesn't have -d. How weird.
-        oscmd("cp -R " + outputdir + "/bin/" + base + " " + binname)
+        if not base.startswith("deploy-stub"):
+            binname = "dstroot/tools/Developer/Panda3D/bin/" + base
+            # OSX needs the -R argument to copy symbolic links correctly, it doesn't have -d. How weird.
+            oscmd("cp -R " + outputdir + "/bin/" + base + " " + binname)
 
     if python_versions:
         # Let's only write a ppython link if there is only one Python version.
@@ -552,6 +553,10 @@ def MakeInstallerOSX(version, runtime=False, python_versions=[], **kwargs):
         # Write a .pth file.
         oscmd("mkdir -p dstroot/pybindings%s/Library/Python/%s/site-packages" % (pyver, pyver))
         WriteFile("dstroot/pybindings%s/Library/Python/%s/site-packages/Panda3D.pth" % (pyver, pyver), "/Developer/Panda3D")
+
+        # Copy over panda3d.dist-info directory.
+        if os.path.isdir(outputdir + "/panda3d.dist-info"):
+            oscmd("cp -R %s/panda3d.dist-info dstroot/pybindings%s/Library/Python/%s/site-packages/" % (outputdir, pyver, pyver))
 
     if not PkgSkip("FFMPEG"):
         oscmd("mkdir -p dstroot/ffmpeg/Developer/Panda3D/lib")

@@ -23,6 +23,7 @@ except:
     exit(1)
 
 from makepandacore import *
+from distutils.util import get_platform
 import time
 import os
 import sys
@@ -70,6 +71,7 @@ WINDOWS_SDK = None
 MSVC_VERSION = None
 BOOUSEINTELCOMPILER = False
 OPENCV_VER_23 = False
+PLATFORM = None
 COPY_PYTHON = True
 
 if "MACOSX_DEPLOYMENT_TARGET" in os.environ:
@@ -415,6 +417,67 @@ MAJOR_VERSION = '.'.join(VERSION.split('.')[:2])
 if P3DSUFFIX is None:
     P3DSUFFIX = MAJOR_VERSION
 
+# Now determine the distutils-style platform tag for the target system.
+target = GetTarget()
+if target == 'windows':
+    if GetTargetArch() == 'x64':
+        PLATFORM = 'win-amd64'
+    else:
+        PLATFORM = 'win32'
+
+elif target == 'darwin':
+    if OSXTARGET:
+        osxver = OSXTARGET
+    else:
+        maj, min = platform.mac_ver()[0].split('.')[:2]
+        osxver = int(maj), int(min)
+
+    arch_tag = None
+    if not OSX_ARCHS:
+        arch_tag = GetTargetArch()
+    elif len(OSX_ARCHS) == 1:
+        arch_tag = OSX_ARCHS[0]
+    elif frozenset(OSX_ARCHS) == frozenset(('i386', 'ppc')):
+        arch_tag = 'fat'
+    elif frozenset(OSX_ARCHS) == frozenset(('x86_64', 'i386')):
+        arch_tag = 'intel'
+    elif frozenset(OSX_ARCHS) == frozenset(('x86_64', 'ppc64')):
+        arch_tag = 'fat64'
+    elif frozenset(OSX_ARCHS) == frozenset(('x86_64', 'i386', 'ppc')):
+        arch_tag = 'fat32'
+    else:
+        raise RuntimeError('No arch tag for arch combination %s' % OSX_ARCHS)
+
+    PLATFORM = 'macosx-{0}.{1}-{2}'.format(osxver[0], osxver[1], arch_tag)
+
+elif target == 'linux' and (os.path.isfile("/lib/libc-2.5.so") or os.path.isfile("/lib64/libc-2.5.so")) and os.path.isdir("/opt/python"):
+    # This is manylinux1.  A bit of a sloppy check, though.
+    if GetTargetArch() in ('x86_64', 'amd64'):
+        PLATFORM = 'manylinux1-x86_64'
+    else:
+        PLATFORM = 'manylinux1-i686'
+
+elif not CrossCompiling():
+    if HasTargetArch():
+        # Replace the architecture in the platform string.
+        platform_parts = get_platform().rsplit('-', 1)
+        target_arch = GetTargetArch()
+        if target_arch == 'amd64':
+            target_arch = 'x86_64'
+        PLATFORM = platform_parts[0] + '-' + target_arch
+    else:
+        # We're not cross-compiling; just take the host arch.
+        PLATFORM = get_platform()
+
+else:
+    target_arch = GetTargetArch()
+    if target_arch == 'amd64':
+        target_arch = 'x86_64'
+    PLATFORM = '{0}-{1}' % (target, target_arch)
+
+
+print("Platform: %s" % PLATFORM)
+
 outputdir_suffix = ""
 
 if (RUNTIME or RTDIST):
@@ -745,9 +808,12 @@ if (COMPILER == "MSVC"):
                 path = GetThirdpartyDir() + "vorbis/lib/{0}.lib".format(lib)
             LibName("VORBIS", path)
     if (PkgSkip("OPUS")==0):
-        LibName("OPUS", GetThirdpartyDir() + "opus/lib/libogg_static.lib")
-        LibName("OPUS", GetThirdpartyDir() + "opus/lib/libopus_static.lib")
-        LibName("OPUS", GetThirdpartyDir() + "opus/lib/libopusfile_static.lib")
+        IncDirectory("OPUS", GetThirdpartyDir() + "opus/include/opus")
+        for lib in ('ogg', 'opus', 'opusfile'):
+            path = GetThirdpartyDir() + "opus/lib/lib{0}_static.lib".format(lib)
+            if not os.path.isfile(path):
+                path = GetThirdpartyDir() + "opus/lib/{0}.lib".format(lib)
+            LibName("OPUS", path)
     for pkg in MAYAVERSIONS:
         if (PkgSkip(pkg)==0):
             LibName(pkg, '"' + SDK[pkg] + '/lib/Foundation.lib"')
@@ -904,10 +970,11 @@ if (COMPILER=="GCC"):
 
         if not PkgSkip("PYTHON"):
             python_lib = SDK["PYTHONVERSION"]
-            if not RTDIST and GetTarget() != 'android':
-                # We don't link anything in the SDK with libpython.
-                python_lib = ""
             SmartPkgEnable("PYTHON", "", python_lib, (SDK["PYTHONVERSION"], SDK["PYTHONVERSION"] + "/Python.h"))
+
+            if GetTarget() == "linux":
+                LibName("PYTHON", "-lutil")
+                LibName("PYTHON", "-lrt")
 
     SmartPkgEnable("OPENSSL",   "openssl",   ("ssl", "crypto"), ("openssl/ssl.h", "openssl/crypto.h"))
     SmartPkgEnable("ZLIB",      "zlib",      ("z"), "zlib.h")
@@ -2000,7 +2067,7 @@ def FreezePy(target, inputs, opts):
     if sys.version_info >= (2, 6):
         cmdstr += "-B "
 
-    cmdstr += os.path.join(GetOutputDir(), "direct", "showutil", "pfreeze.py")
+    cmdstr += os.path.join(GetOutputDir(), "direct", "dist", "pfreeze.py")
 
     if 'FREEZE_STARTUP' in opts:
         cmdstr += " -s"
@@ -2594,6 +2661,9 @@ def WriteConfigSettings():
         if (PkgSkip(x)): ConditionalWriteFile(GetOutputDir() + '/tmp/dtool_have_'+x.lower()+'.dat', "0\n")
         else:            ConditionalWriteFile(GetOutputDir() + '/tmp/dtool_have_'+x.lower()+'.dat', "1\n")
 
+    # Finally, write a platform.dat with the platform we are compiling for.
+    ConditionalWriteFile(GetOutputDir() + '/tmp/platform.dat', PLATFORM)
+
     # This is useful for tools like makepackage that need to know things about
     # the build parameters.
     ConditionalWriteFile(GetOutputDir() + '/tmp/optimize.dat', str(GetOptimize()))
@@ -2825,16 +2895,16 @@ __version__ = '%s'
 
 if GetTarget() == 'windows':
     p3d_init += """
-import os
+if '__file__' in locals():
+    import os
 
-bindir = os.path.join(os.path.dirname(__file__), '..', 'bin')
-if os.path.isdir(bindir):
-    if not os.environ.get('PATH'):
-        os.environ['PATH'] = bindir
-    else:
-        os.environ['PATH'] = bindir + os.pathsep + os.environ['PATH']
-
-del os, bindir
+    bindir = os.path.join(os.path.dirname(__file__), '..', 'bin')
+    if os.path.isdir(bindir):
+        if not os.environ.get('PATH'):
+            os.environ['PATH'] = bindir
+        else:
+            os.environ['PATH'] = bindir + os.pathsep + os.environ['PATH']
+    del os, bindir
 """
 
 if not PkgSkip("PYTHON"):
@@ -2908,6 +2978,36 @@ if not PkgSkip("PYTHON"):
     ConditionalWriteFile(GetOutputDir() + '/pandac/PandaModules.py', panda_modules_code)
     ConditionalWriteFile(GetOutputDir() + '/pandac/extension_native_helpers.py', exthelpers_code)
     ConditionalWriteFile(GetOutputDir() + '/pandac/__init__.py', '')
+
+##########################################################################################
+#
+# Write the dist-info directory.
+#
+##########################################################################################
+
+# This is just some basic stuff since setuptools just needs this file to
+# exist, otherwise it will not read the entry_points.txt file.  Maybe we will
+# eventually want to merge this with the metadata generator in makewheel.py.
+METADATA = """Metadata-Version: 2.0
+Name: Panda3D
+Version: {version}
+License: BSD
+Home-page: https://www.panda3d.org/
+Author: Panda3D Team
+Author-email: etc-panda3d@lists.andrew.cmu.edu
+"""
+
+ENTRY_POINTS = """[distutils.commands]
+build_apps = direct.dist.commands:build_apps
+bdist_apps = direct.dist.commands:bdist_apps
+"""
+
+if not PkgSkip("DIRECT"):
+    dist_dir = os.path.join(GetOutputDir(), 'panda3d.dist-info')
+    MakeDirectory(dist_dir)
+
+    ConditionalWriteFile(os.path.join(dist_dir, 'METADATA'), METADATA.format(version=VERSION))
+    ConditionalWriteFile(os.path.join(dist_dir, 'entry_points.txt'), ENTRY_POINTS)
 
 ##########################################################################################
 #
@@ -6533,6 +6633,36 @@ if not PkgSkip("CONTRIB") and not PkgSkip("PYTHON") and not RUNTIME:
   PyTargetAdd('_rplight.pyd', input='p3rplight_composite1.obj')
   PyTargetAdd('_rplight.pyd', input='libp3interrogatedb.dll')
   PyTargetAdd('_rplight.pyd', input=COMMON_PANDA_LIBS)
+
+#
+# DIRECTORY: pandatool/src/deploy-stub
+#
+if PkgSkip("PYTHON") == 0:
+    OPTS=['DIR:pandatool/src/deploy-stub', 'BUILDING:DEPLOYSTUB']
+    PyTargetAdd('deploy-stub.obj', opts=OPTS, input='deploy-stub.c')
+    if GetTarget() == 'windows':
+        PyTargetAdd('frozen_dllmain.obj', opts=OPTS, input='frozen_dllmain.c')
+
+    if GetTarget() == 'linux' or GetTarget() == 'freebsd':
+        # Setup rpath so libs can be found in the same directory as the deployed game
+        LibName('DEPLOYSTUB', "-Wl,-rpath,\$ORIGIN")
+        LibName('DEPLOYSTUB', "-Wl,-z,origin")
+        LibName('DEPLOYSTUB', "-rdynamic")
+    PyTargetAdd('deploy-stub.exe', input='deploy-stub.obj')
+    if GetTarget() == 'windows':
+        PyTargetAdd('deploy-stub.exe', input='frozen_dllmain.obj')
+    PyTargetAdd('deploy-stub.exe', opts=['WINSHELL', 'DEPLOYSTUB', 'NOICON'])
+
+    if GetTarget() == 'windows':
+        PyTargetAdd('deploy-stubw.exe', input='deploy-stub.obj')
+        PyTargetAdd('deploy-stubw.exe', input='frozen_dllmain.obj')
+        PyTargetAdd('deploy-stubw.exe', opts=['SUBSYSTEM:WINDOWS', 'WINSHELL', 'DEPLOYSTUB', 'NOICON'])
+    elif GetTarget() == 'darwin':
+        DefSymbol('MACOS_APP_BUNDLE', 'MACOS_APP_BUNDLE')
+        OPTS = OPTS + ['MACOS_APP_BUNDLE']
+        PyTargetAdd('deploy-stubw.obj', opts=OPTS, input='deploy-stub.c')
+        PyTargetAdd('deploy-stubw.exe', input='deploy-stubw.obj')
+        PyTargetAdd('deploy-stubw.exe', opts=['MACOS_APP_BUNDLE', 'DEPLOYSTUB', 'NOICON'])
 
 #
 # Generate the models directory and samples directory

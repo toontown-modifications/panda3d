@@ -3362,8 +3362,13 @@ def CalcLocation(fn, ipath):
 
 
 def FindLocation(fn, ipath, pyabi=None):
-    if (GetLinkAllStatic() and fn.endswith(".dll")):
-        fn = fn[:-4] + ".lib"
+    if GetLinkAllStatic():
+        if fn.endswith(".dll"):
+            fn = fn[:-4] + ".lib"
+        elif fn.endswith(".pyd"):
+            fn = "libpy.panda3d." \
+               + os.path.splitext(fn[:-4] + GetExtensionSuffix())[0] + ".lib"
+
     loc = CalcLocation(fn, ipath)
     base, ext = os.path.splitext(fn)
 
@@ -3578,10 +3583,14 @@ def TargetAdd(target, dummy=0, opts=[], input=[], dep=[], ipath=None, winrc=None
     if winrc and GetTarget() == 'windows':
         TargetAdd(target, input=WriteResourceFile(target.split("/")[-1].split(".")[0], **winrc))
 
-    if target.endswith(".in"):
+    ext = os.path.splitext(target)[1]
+    if ext == ".in":
         if not CrossCompiling():
             t.deps[FindLocation("interrogate.exe", [])] = 1
         t.deps[FindLocation("dtool_have_python.dat", [])] = 1
+
+    if ext in (".obj", ".tlb", ".res", ".plugin", ".app") or ext in SUFFIX_DLL or ext in SUFFIX_LIB:
+        t.deps[FindLocation("platform.dat", [])] = 1
 
     if target.endswith(".obj") and any(x.endswith(".in") for x in input):
         if not CrossCompiling():
