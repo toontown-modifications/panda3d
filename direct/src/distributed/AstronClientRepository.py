@@ -4,7 +4,7 @@ from direct.directnotify import DirectNotifyGlobal
 from ClientRepositoryBase import ClientRepositoryBase
 from MsgTypes import *
 from direct.distributed.PyDatagram import PyDatagram
-from pandac.PandaModules import STUint16, STUint32
+from panda3d.direct import STUint16, STUint32
 
 class AstronClientRepository(ClientRepositoryBase):
     """
