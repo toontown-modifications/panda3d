@@ -3361,7 +3361,6 @@ if (PkgSkip("PANDATOOL")==0):
     CopyAllHeaders('pandatool/src/progbase')
     CopyAllHeaders('pandatool/src/eggbase')
     CopyAllHeaders('pandatool/src/bam')
-    CopyAllHeaders('pandatool/src/cvscopy')
     CopyAllHeaders('pandatool/src/daeegg')
     CopyAllHeaders('pandatool/src/daeprogs')
     CopyAllHeaders('pandatool/src/dxf')
@@ -5735,15 +5734,6 @@ if not PkgSkip("PANDATOOL"):
     TargetAdd('egg2bam.exe', opts=['ADVAPI',  'FFTW'])
 
 #
-# DIRECTORY: pandatool/src/cvscopy/
-#
-
-if not PkgSkip("PANDATOOL"):
-  OPTS=['DIR:pandatool/src/cvscopy']
-  TargetAdd('p3cvscopy_composite1.obj', opts=OPTS, input='p3cvscopy_composite1.cxx')
-  TargetAdd('libp3cvscopy.lib', input='p3cvscopy_composite1.obj')
-
-#
 # DIRECTORY: pandatool/src/daeegg/
 #
 if not PkgSkip("PANDATOOL") and not PkgSkip("FCOLLADA") and not PkgSkip("EGG"):
@@ -6007,7 +5997,7 @@ if not PkgSkip("PANDATOOL") and not PkgSkip("EGG"):
 #
 
 if not PkgSkip("PANDATOOL"):
-  OPTS=['DIR:pandatool/src/fltprogs', 'DIR:pandatool/src/flt', 'DIR:pandatool/src/cvscopy']
+  OPTS=['DIR:pandatool/src/fltprogs', 'DIR:pandatool/src/flt']
   TargetAdd('flt-info_fltInfo.obj', opts=OPTS, input='fltInfo.cxx')
   TargetAdd('flt-info.exe', input='flt-info_fltInfo.obj')
   TargetAdd('flt-info.exe', input='libp3flt.lib')
@@ -6023,15 +6013,6 @@ if not PkgSkip("PANDATOOL"):
   TargetAdd('flt-trans.exe', input='libp3pandatoolbase.lib')
   TargetAdd('flt-trans.exe', input=COMMON_PANDA_LIBS)
   TargetAdd('flt-trans.exe', opts=['ADVAPI'])
-
-  TargetAdd('fltcopy_fltCopy.obj', opts=OPTS, input='fltCopy.cxx')
-  TargetAdd('fltcopy.exe', input='fltcopy_fltCopy.obj')
-  TargetAdd('fltcopy.exe', input='libp3cvscopy.lib')
-  TargetAdd('fltcopy.exe', input='libp3flt.lib')
-  TargetAdd('fltcopy.exe', input='libp3progbase.lib')
-  TargetAdd('fltcopy.exe', input='libp3pandatoolbase.lib')
-  TargetAdd('fltcopy.exe', input=COMMON_PANDA_LIBS)
-  TargetAdd('fltcopy.exe', opts=['ADVAPI'])
 
   if not PkgSkip("EGG"):
     TargetAdd('egg2flt_eggToFlt.obj', opts=OPTS, input='eggToFlt.cxx')
@@ -6421,7 +6402,7 @@ for VER in MAYAVERSIONS:
       # No x86_64 support.
       continue
 
-    OPTS=['DIR:pandatool/src/mayaprogs', 'DIR:pandatool/src/maya', 'DIR:pandatool/src/mayaegg', 'DIR:pandatool/src/cvscopy', 'BUILDING:MISC', VER] + ARCH_OPTS
+    OPTS=['DIR:pandatool/src/mayaprogs', 'DIR:pandatool/src/maya', 'DIR:pandatool/src/mayaegg', 'BUILDING:MISC', VER]
     TargetAdd('mayaeggimport'+VNUM+'_mayaeggimport.obj', opts=OPTS, input='mayaEggImport.cxx')
     TargetAdd('mayaeggimport'+VNUM+'.mll', input='mayaegg'+VNUM+'_loader.obj')
     TargetAdd('mayaeggimport'+VNUM+'.mll', input='mayaeggimport'+VNUM+'_mayaeggimport.obj')
@@ -6429,7 +6410,7 @@ for VER in MAYAVERSIONS:
     TargetAdd('mayaeggimport'+VNUM+'.mll', input=COMMON_PANDA_LIBS)
     #if GetTarget() == 'windows':
     #  TargetAdd('mayaeggimport'+VNUM+'.mll', input='libp3pystub.lib')
-    TargetAdd('mayaeggimport'+VNUM+'.mll', opts=['ADVAPI', VER]+ARCH_OPTS)
+    TargetAdd('mayaeggimport'+VNUM+'.mll', opts=['ADVAPI', VER])
 
     TargetAdd('mayaloader'+VNUM+'_config_mayaloader.obj', opts=OPTS, input='config_mayaloader.cxx')
     TargetAdd('libp3mayaloader'+VNUM+'.dll', input='mayaloader'+VNUM+'_config_mayaloader.obj')
@@ -6453,7 +6434,7 @@ for VER in MAYAVERSIONS:
     TargetAdd('libp3mayaloader'+VNUM+'.dll', input='libp3pandatoolbase.lib')
     TargetAdd('libp3mayaloader'+VNUM+'.dll', input='libpandaegg.dll')
     TargetAdd('libp3mayaloader'+VNUM+'.dll', input=COMMON_PANDA_LIBS)
-    TargetAdd('libp3mayaloader'+VNUM+'.dll', opts=['ADVAPI', VER]+ARCH_OPTS)
+    TargetAdd('libp3mayaloader'+VNUM+'.dll', opts=['ADVAPI', VER])
 
     TargetAdd('mayapview'+VNUM+'_mayaPview.obj', opts=OPTS, input='mayaPview.cxx')
     TargetAdd('libmayapview'+VNUM+'.mll', input='mayapview'+VNUM+'_mayaPview.obj')
@@ -6464,7 +6445,7 @@ for VER in MAYAVERSIONS:
       TargetAdd('libmayapview'+VNUM+'.mll', input=COMMON_EGG2X_LIBS)
     else:
       TargetAdd('libmayapview'+VNUM+'.mll', input=COMMON_EGG2X_LIBS)
-    TargetAdd('libmayapview'+VNUM+'.mll', opts=['ADVAPI', VER]+ARCH_OPTS)
+    TargetAdd('libmayapview'+VNUM+'.mll', opts=['ADVAPI', VER])
 
     TargetAdd('maya2egg'+VNUM+'_mayaToEgg.obj', opts=OPTS, input='mayaToEgg.cxx')
     TargetAdd('maya2egg'+VNUM+'_bin.exe', input='maya2egg'+VNUM+'_mayaToEgg.obj')
@@ -6474,7 +6455,7 @@ for VER in MAYAVERSIONS:
       TargetAdd('maya2egg'+VNUM+'_bin.exe', input=COMMON_EGG2X_LIBS)
     else:
       TargetAdd('maya2egg'+VNUM+'_bin.exe', input=COMMON_EGG2X_LIBS)
-    TargetAdd('maya2egg'+VNUM+'_bin.exe', opts=['ADVAPI', VER]+ARCH_OPTS)
+    TargetAdd('maya2egg'+VNUM+'_bin.exe', opts=['ADVAPI', VER])
 
     TargetAdd('egg2maya'+VNUM+'_eggToMaya.obj', opts=OPTS, input='eggToMaya.cxx')
     TargetAdd('egg2maya'+VNUM+'_bin.exe', input='egg2maya'+VNUM+'_eggToMaya.obj')
@@ -6484,38 +6465,23 @@ for VER in MAYAVERSIONS:
       TargetAdd('egg2maya'+VNUM+'_bin.exe', input=COMMON_EGG2X_LIBS)
     else:
       TargetAdd('egg2maya'+VNUM+'_bin.exe', input=COMMON_EGG2X_LIBS)
-    TargetAdd('egg2maya'+VNUM+'_bin.exe', opts=['ADVAPI', VER]+ARCH_OPTS)
-
-    TargetAdd('mayacopy'+VNUM+'_mayaCopy.obj', opts=OPTS, input='mayaCopy.cxx')
-    TargetAdd('mayacopy'+VNUM+'_bin.exe', input='mayacopy'+VNUM+'_mayaCopy.obj')
-    TargetAdd('mayacopy'+VNUM+'_bin.exe', input='libp3cvscopy.lib')
-    TargetAdd('mayacopy'+VNUM+'_bin.exe', input='libmaya'+VNUM+'.lib')
-    if GetTarget() == 'windows':
-      TargetAdd('mayacopy'+VNUM+'_bin.exe', input=COMMON_EGG2X_LIBS)
-    else:
-      TargetAdd('mayacopy'+VNUM+'_bin.exe', input=COMMON_EGG2X_LIBS)
-    TargetAdd('mayacopy'+VNUM+'_bin.exe', opts=['ADVAPI', VER]+ARCH_OPTS)
+    TargetAdd('egg2maya'+VNUM+'_bin.exe', opts=['ADVAPI', VER])
 
     TargetAdd('mayasavepview'+VNUM+'_mayaSavePview.obj', opts=OPTS, input='mayaSavePview.cxx')
     TargetAdd('libmayasavepview'+VNUM+'.mll', input='mayasavepview'+VNUM+'_mayaSavePview.obj')
-    TargetAdd('libmayasavepview'+VNUM+'.mll', opts=['ADVAPI', VER]+ARCH_OPTS)
+    TargetAdd('libmayasavepview'+VNUM+'.mll', opts=['ADVAPI', VER])
 
     TargetAdd('mayapath'+VNUM+'.obj', opts=OPTS, input='mayapath.cxx')
 
     TargetAdd('maya2egg'+VNUM+'.exe', input='mayapath'+VNUM+'.obj')
     TargetAdd('maya2egg'+VNUM+'.exe', input='libpandaexpress.dll')
     TargetAdd('maya2egg'+VNUM+'.exe', input=COMMON_DTOOL_LIBS)
-    TargetAdd('maya2egg'+VNUM+'.exe', opts=['ADVAPI']+ARCH_OPTS)
+    TargetAdd('maya2egg'+VNUM+'.exe', opts=['ADVAPI'])
 
     TargetAdd('egg2maya'+VNUM+'.exe', input='mayapath'+VNUM+'.obj')
     TargetAdd('egg2maya'+VNUM+'.exe', input='libpandaexpress.dll')
     TargetAdd('egg2maya'+VNUM+'.exe', input=COMMON_DTOOL_LIBS)
-    TargetAdd('egg2maya'+VNUM+'.exe', opts=['ADVAPI']+ARCH_OPTS)
-
-    TargetAdd('mayacopy'+VNUM+'.exe', input='mayapath'+VNUM+'.obj')
-    TargetAdd('mayacopy'+VNUM+'.exe', input='libpandaexpress.dll')
-    TargetAdd('mayacopy'+VNUM+'.exe', input=COMMON_DTOOL_LIBS)
-    TargetAdd('mayacopy'+VNUM+'.exe', opts=['ADVAPI']+ARCH_OPTS)
+    TargetAdd('egg2maya'+VNUM+'.exe', opts=['ADVAPI'])
 
 #
 # DIRECTORY: contrib/src/ai/
