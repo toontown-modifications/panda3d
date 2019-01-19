@@ -101,6 +101,7 @@ PkgListSet(["PYTHON", "DIRECT",                        # Python support
   "PANDAPARTICLESYSTEM",                               # Built in particle system
   "CONTRIB",                                           # Experimental
   "SSE2", "NEON",                                      # Compiler features
+  "DNA",                                               # Toontown
 ])
 
 CheckPandaSourceTree()
@@ -3340,6 +3341,9 @@ if (PkgSkip("BULLET")==0):
 if (PkgSkip("SPEEDTREE")==0):
     CopyAllHeaders('panda/src/speedtree')
 
+if (PkgSkip("DNA")==0):
+    CopyAllHeaders('panda/src/toontown')
+
 if (PkgSkip("DIRECT")==0):
     CopyAllHeaders('direct/src/directbase')
     CopyAllHeaders('direct/src/dcparser')
@@ -5199,6 +5203,38 @@ if (not RUNTIME and (GetTarget() in ('windows', 'darwin') or PkgSkip("X11")==0) 
   TargetAdd('libp3tinydisplay.dll', input='p3tinydisplay_ztriangle_4.obj')
   TargetAdd('libp3tinydisplay.dll', input='p3tinydisplay_ztriangle_table.obj')
   TargetAdd('libp3tinydisplay.dll', input=COMMON_PANDA_LIBS)
+
+#
+# DIRECTORY: panda/src/toontown/
+#
+if (PkgSkip("DNA")==0 and PkgSkip("PYTHON")==0 and not RUNTIME):
+    OPTS=['DIR:panda/src/toontown', 'BUILDING:DNA']
+    TargetAdd('toontown_composite.obj', opts=OPTS, input='p3toontown_composite1.cxx')
+
+    OPTS=['DIR:panda/src/toontown', 'BUILDING:DNA', 'BISONPREFIX_dnayy']
+    TargetAdd('dnaParser.obj', opts=OPTS, input='dna.yxx')
+    TargetAdd('dnaLexer.obj', opts=OPTS, input='dna.lxx')
+
+    TargetAdd('libp3toontown.dll', input='toontown_composite.obj')
+    TargetAdd('libp3toontown.dll', input='dnaParser.obj')
+    TargetAdd('libp3toontown.dll', input='dnaLexer.obj')
+    TargetAdd('libp3toontown.dll', input=COMMON_PANDA_LIBS)
+    TargetAdd('libp3toontown.dll', opts=OPTS)
+
+    OPTS=['DIR:panda/src/toontown']
+    IGATEFILES=GetDirectoryContents('panda/src/toontown', ["*.h", "*_composite*.cxx"])
+    TargetAdd('libp3toontown.in', opts=OPTS, input=IGATEFILES)
+    TargetAdd('libp3toontown.in', opts=['IMOD:panda3d.toontown', 'ILIB:libp3toontown', 'SRCDIR:panda/src/toontown'])
+    
+    PyTargetAdd('toontown_module.obj', input='libp3toontown.in')
+    PyTargetAdd('toontown_module.obj', opts=OPTS)
+    PyTargetAdd('toontown_module.obj', opts=['IMOD:panda3d.toontown', 'ILIB:toontown', 'IMPORT:panda3d.core'])
+    
+    PyTargetAdd('toontown.pyd', input='toontown_module.obj')
+    PyTargetAdd('toontown.pyd', input='libp3toontown_igate.obj')
+    PyTargetAdd('toontown.pyd', input='libp3toontown.dll')
+    PyTargetAdd('toontown.pyd', input='libp3interrogatedb.dll')
+    PyTargetAdd('toontown.pyd', input=COMMON_PANDA_LIBS)
 
 #
 # DIRECTORY: direct/src/directbase/
