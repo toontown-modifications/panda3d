@@ -15,6 +15,7 @@
 #include "DNAWall.h"
 #include "DNAWindows.h"
 #include "DNACornice.h"
+#include "DNAData.h"
 #include "DNALandmarkBuilding.h"
 #include "DNAAnimProp.h"
 #include "DNAInteractiveProp.h"
@@ -57,6 +58,7 @@ void init_libpandadna()
     DNAWall::init_type();
     DNAWindows::init_type();
     DNACornice::init_type();
+    DNAData::init_type();
     DNALandmarkBuilding::init_type();
     DNAAnimProp::init_type();
     DNAInteractiveProp::init_type();
