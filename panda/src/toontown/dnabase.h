@@ -1,9 +1,9 @@
 #ifndef _H_DNA_BASE_
 #define _H_DNA_BASE_
 
-#include "config_dna.h"
+#include "config_toontown.h"
 
-#include <pandabase.h>
+#include "pandabase.h"
 
 #define COMPCODE_GROUP 1
 #define COMPCODE_VISGROUP 2
@@ -29,8 +29,8 @@ typedef unsigned short zone_id_t;
 typedef int block_number_t;
 typedef unsigned short point_index_t;
 
-#include <datagramIterator.h>
-#include <luse.h>
+#include "datagramIterator.h"
+#include "luse.h"
 
 inline void dgi_extract_color(DatagramIterator& dgi, LVecBase4f& color)
 {
