@@ -1,4 +1,15 @@
-#include "config_dna.h"
+// Filename: config_toontown.cxx
+// Created by:  jwcotejr (19Jan19)
+//
+////////////////////////////////////////////////////////////////////
+//
+// TOONTOWN OFFLINE SOFTWARE
+// Copyright (c) The Toontown Offline Team.  All rights reserved.
+//
+// Use of this software by anyone other than those of the Toontown Offline team
+// is strictly prohibited without explicit permission from the Toontown Offline team.
+//
+////////////////////////////////////////////////////////////////////
 
 #include "DNAStorage.h"
 #include "DNASuitPoint.h"
@@ -25,25 +36,13 @@
 #include "DNAStreet.h"
 #include "DNABattleCell.h"
 
-#include <pandabase.h>
-#include <dconfig.h>
+#include "config_toontown.h"
 
-Configure(config_dna);
 NotifyCategoryDef(dna, "");
 
-ConfigureFn(config_dna)
+ConfigureDef(config_toontown)
+ConfigureFn(config_toontown)
 {
-    init_libpandadna();
-}
-
-void init_libpandadna()
-{
-    static bool initialized = false;
-    if (initialized)
-        return;
-
-    initialized = true;
-    
     DNASuitPoint::init_type();
     DNASuitEdge::init_type();
     DNASuitPath::init_type();

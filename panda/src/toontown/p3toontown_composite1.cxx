@@ -4,16 +4,16 @@
 ////////////////////////////////////////////////////////////////////
 //
 // TOONTOWN OFFLINE SOFTWARE
-// Copyright (c) Toontown Offline.  All rights reserved.
+// Copyright (c) The Toontown Offline Team.  All rights reserved.
 //
-// Use of this software by anyone other than those of Toontown Offline
-// is strictly prohibited without explicit permission from Toontown Offline.
+// Use of this software by anyone other than those of the Toontown Offline team
+// is strictly prohibited without explicit permission from the Toontown Offline team.
 //
 ////////////////////////////////////////////////////////////////////
 
 #include "DNALoader.cxx"
 #include "DNAStorage.cxx"
-#include "config_dna.cxx"
+#include "config_toontown.cxx"
 #include "DNASuitEdge.cxx"
 #include "DNASuitPath.cxx"
 #include "DNASuitPoint.cxx"
