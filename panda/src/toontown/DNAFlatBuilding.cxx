@@ -108,7 +108,7 @@ void DNAFlatBuilding::traverse(NodePath& np, DNAStorage* store)
         }
 
         NodePath camera_barrier = result.copy_to(internal_node, 0);
-        camera_barrier.set_scale((1, 1, DNAFlatBuilding::current_wall_height));
+        camera_barrier.set_scale(1, 1, DNAFlatBuilding::current_wall_height);
         internal_node.flatten_strong();
 
         NodePath coll_np = node.find("**/door_*/+CollisionNode");
