@@ -1,21 +1,20 @@
-// Filename: p3toontown_composite1.cxx
-// Created by:  jwcotejr (18Jan19)
-//
-////////////////////////////////////////////////////////////////////
-//
-// TOONTOWN OFFLINE SOFTWARE
-// Copyright (c) The Toontown Offline Team.  All rights reserved.
-//
-// Use of this software by anyone other than those of the Toontown Offline team
-// is strictly prohibited without explicit permission from the Toontown Offline team.
-//
-////////////////////////////////////////////////////////////////////
+/**
+ * TOONTOWN OFFLINE SOFTWARE
+ * Copyright (c) The Toontown Offline Team.  All rights reserved.
+ *
+ * Use of this software by anyone other than those of the Toontown Offline team
+ * is strictly prohibited without explicit permission from the Toontown Offline team.
+ *
+ * @file p3toontown_composite1.cxx
+ * @author jwcotejr
+ * @date 2019-01-18
+ */
 
 #include "DNALoader.cxx"
 #include "DNAStorage.cxx"
 #include "config_toontown.cxx"
-#include "DNASuitEdge.cxx"
 #include "DNASuitPath.cxx"
+#include "DNASuitEdge.cxx"
 #include "DNASuitPoint.cxx"
 #include "SuitLeg.cxx"
 #include "SuitLegList.cxx"
