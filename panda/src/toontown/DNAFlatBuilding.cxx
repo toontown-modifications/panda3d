@@ -107,8 +107,12 @@ void DNAFlatBuilding::traverse(NodePath& np, DNAStorage* store)
             return;
         }
 
-        NodePath camera_barrier = result.copy_to(internal_node, 0);
+        NodePath camera_barrier = result.copy_to(internal_node);
         camera_barrier.set_scale(1, 1, DNAFlatBuilding::current_wall_height);
+
+        setup_suit_flat_building(np, store);
+        setup_cogdo_flat_building(np, store);
+
         internal_node.flatten_strong();
 
         NodePath coll_np = node.find("**/door_*/+CollisionNode");
@@ -119,7 +123,7 @@ void DNAFlatBuilding::traverse(NodePath& np, DNAStorage* store)
             coll_np.set_name(ss.str());
         }
 
-        camera_barrier.wrt_reparent_to(np, 0);
+        camera_barrier.wrt_reparent_to(np);
 
         NodePathCollection wall_collection, door_collection, cornice_collection,
                            window_collection;
@@ -155,9 +159,6 @@ void DNAFlatBuilding::traverse(NodePath& np, DNAStorage* store)
 
         wall_holder.remove_node();
         wall_decal.remove_node();
-        
-        setup_suit_flat_building(np, store);
-        setup_cogdo_flat_building(np, store);
         
         node.flatten_strong();
     }
