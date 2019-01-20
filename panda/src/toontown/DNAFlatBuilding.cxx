@@ -1,8 +1,8 @@
 #include "DNAFlatBuilding.h"
 #include "DNAWall.h"
 
-#include <decalEffect.h>
-#include <nodePathCollection.h>
+#include "decalEffect.h"
+#include "nodePathCollection.h"
 
 TypeHandle DNAFlatBuilding::_type_handle;
 int DNAFlatBuilding::current_wall_height = 0;
