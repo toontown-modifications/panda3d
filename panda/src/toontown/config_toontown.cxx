@@ -11,13 +11,9 @@
  */
 
 #include "config_toontown.h"
-#include "DNALoader.h"
-#include "DNAStorage.h"
 #include "DNASuitPath.h"
 #include "DNASuitEdge.h"
 #include "DNASuitPoint.h"
-#include "SuitLeg.h"
-#include "SuitLegList.h"
 #include "DNAAnimBuilding.h"
 #include "DNAAnimProp.h"
 #include "DNABattleCell.h"
@@ -65,14 +61,10 @@ init_libtoontown() {
     return;
   }
   initialized = true;
-  
-  DNALoader::init_type();
-  DNAStorage::init_type();
+
   DNASuitPath::init_type();
   DNASuitEdge::init_type();
   DNASuitPoint::init_type();
-  SuitLeg::init_type();
-  SuitLegList::init_type();
   DNAAnimBuilding::init_type();
   DNAAnimProp::init_type();
   DNABattleCell::init_type();

@@ -19,4 +19,6 @@
 
 NotifyCategoryDecl(dna, EXPCL_DNA, EXPTP_DNA);
 
+extern EXPCL_DNA void init_libtoontown();
+
 #endif /* __CONFIG_TOONTOWN_H__ */
