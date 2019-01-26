@@ -7,7 +7,7 @@
 #ifdef DO_YYDEBUG
 #define YYDEBUG 1
 #endif
-#include "dna_yxx.hxx"
+#include "dnaParser.h"
 
 #include "DNAVisGroup.h"
 #include "DNANode.h"

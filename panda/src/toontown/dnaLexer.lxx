@@ -1,7 +1,7 @@
 %{
 #include "dnaLexerDefs.h"
 #include "dnaParserDefs.h"
-#include "dna_yxx.hxx"
+#include "dnaParser.h"
 
 #include "pstrtod.h"
 
