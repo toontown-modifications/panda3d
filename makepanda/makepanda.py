@@ -5215,12 +5215,12 @@ if (PkgSkip("DNA")==0 and PkgSkip("PYTHON")==0 and not RUNTIME):
     TargetAdd('toontown_composite.obj', opts=OPTS, input='p3toontown_composite1.cxx')
 
     OPTS=['DIR:panda/src/toontown', 'BUILDING:DNA', 'BISONPREFIX_dnayy']
-    TargetAdd('dnaParser.obj', opts=OPTS, input='dnaParser.yxx')
-    TargetAdd('dnaLexer.obj', opts=OPTS, input='dnaLexer.lxx')
+    TargetAdd('p3toontown_dnaParser.obj', opts=OPTS, input='dnaParser.yxx')
+    TargetAdd('p3toontown_dnaLexer.obj', opts=OPTS, input='dnaLexer.lxx')
 
     TargetAdd('libp3toontown.dll', input='toontown_composite.obj')
-    TargetAdd('libp3toontown.dll', input='dnaParser.obj')
-    TargetAdd('libp3toontown.dll', input='dnaLexer.obj')
+    TargetAdd('libp3toontown.dll', input='p3toontown_dnaParser.obj')
+    TargetAdd('libp3toontown.dll', input='p3toontown_dnaLexer.obj')
     TargetAdd('libp3toontown.dll', input=COMMON_PANDA_LIBS)
     TargetAdd('libp3toontown.dll', opts=OPTS)
 
