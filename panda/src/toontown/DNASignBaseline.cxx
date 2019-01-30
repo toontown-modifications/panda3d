@@ -70,13 +70,6 @@ void DNASignBaseline::traverse(NodePath& np, DNAStorage* store)
             textnode = new TextNode("text");
             textnode->set_text_color(m_color);
             textnode->set_font(font);
-
-            if (m_flags.find("d") != std::string::npos)
-            {
-                textnode->set_shadow_color(m_color[0] * 0.3, m_color[1] * 0.3, m_color[2] * 0.3, m_color[3] * 0.7);
-                textnode->set_shadow(0.03, 0.03);
-            }
-
             textnode->set_text(std::string(1, text[i]));
 
             LVecBase3f pos(0, 0, 0);
