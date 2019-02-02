@@ -42,7 +42,11 @@ void DNASign::traverse(NodePath& np, DNAStorage* store)
         _np.set_name("sign");
     }
 
-    _np.set_depth_offset(50);
+    std::string npName = np.get_name();
+    if (npName.find("linktunnel_") != std::string::npos && npName.find("hq_") != std::string::npos)
+        m_pos[1] -= 0.45;
+    else
+        m_pos[1] -= 0.05;
 
     origin = np.find("**/*sign_origin");
     _np.set_pos_hpr_scale(origin, m_pos, m_hpr, m_scale);
@@ -53,5 +57,5 @@ void DNASign::traverse(NodePath& np, DNAStorage* store)
     node->set_preserve_transform(ModelNode::PT_net);
 
     LMatrix4f mat = _np.get_transform()->get_mat();
-    store->store_block_sign_transform(atoi(store->get_block(np.get_name()).c_str()), mat);
+    store->store_block_sign_transform(atoi(store->get_block(npName).c_str()), mat);
 }
