@@ -320,10 +320,8 @@ void DNAStorage::reset_block_zones()
 bool DNAStorage::allow_suit_origin(NodePath& np)
 {
     // NOTICE: game-specific hack
-    if (np.get_name().find("gag_shop") != std::string::npos)
-        return false;
-
-    if (np.get_name().find("pet_shop") != std::string::npos)
+    std::string npName = np.get_name();
+    if (npName.find("gag_shop") != std::string::npos || npName.find("pet_shop") != std::string::npos || npName.find("toon_landmark_hq") != std::string::npos)
         return false;
 
     return true;
