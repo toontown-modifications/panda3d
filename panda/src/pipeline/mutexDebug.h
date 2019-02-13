@@ -65,8 +65,6 @@ private:
   void report_deadlock(Thread *current_thread);
 
 private:
-  INLINE static MutexTrueImpl *get_global_lock();
-
   bool _allow_recursion;
   bool _lightweight;
   Thread *_locking_thread;
@@ -80,10 +78,9 @@ private:
   ConditionVarImpl _cvar_impl;
 
   static int _pstats_count;
-  static MutexTrueImpl *_global_lock;
+  static MutexTrueImpl _global_lock;
 
   friend class ConditionVarDebug;
-  friend class ConditionVarFullDebug;
 };
 
 INLINE std::ostream &
