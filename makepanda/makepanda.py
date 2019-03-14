@@ -158,7 +158,7 @@ def usage(problem):
     print("  --everything      (enable every third-party lib)")
     print("  --directx-sdk=X   (specify version of DirectX SDK to use: jun2010, aug2009, mar2009, aug2006)")
     print("  --windows-sdk=X   (specify Windows SDK version, eg. 7.0, 7.1 or 10.  Default is 7.1)")
-    print("  --msvc-version=X  (specify Visual C++ version, eg. 10, 11, 12, 14.  Default is 14)")
+    print("  --msvc-version=X  (specify Visual C++ version, eg. 10, 11, 12, 14, 14.1, 14.2.  Default is 14)")
     print("  --use-icl         (experimental setting to use an intel compiler instead of MSVC on Windows)")
     print("")
     print("The simplest way to compile panda is to just type:")
@@ -3988,12 +3988,12 @@ if (not RUNTIME):
 #
 
 if (not RUNTIME):
-  OPTS=['DIR:panda/src/display', 'BUILDING:PANDA']
+  OPTS=['DIR:panda/src/display', 'BUILDING:PANDA', 'X11']
   TargetAdd('p3display_graphicsStateGuardian.obj', opts=OPTS, input='graphicsStateGuardian.cxx')
   TargetAdd('p3display_composite1.obj', opts=OPTS, input='p3display_composite1.cxx')
   TargetAdd('p3display_composite2.obj', opts=OPTS, input='p3display_composite2.cxx')
 
-  OPTS=['DIR:panda/src/display']
+  OPTS=['DIR:panda/src/display', 'X11']
   IGATEFILES=GetDirectoryContents('panda/src/display', ["*.h", "*_composite*.cxx"])
   IGATEFILES.remove("renderBuffer.h")
   TargetAdd('libp3display.in', opts=OPTS, input=IGATEFILES)
@@ -4713,7 +4713,7 @@ if not RUNTIME and not PkgSkip("EGG"):
   TargetAdd('p3egg2pg_composite2.obj', opts=OPTS, input='p3egg2pg_composite2.cxx')
 
   OPTS=['DIR:panda/src/egg2pg']
-  IGATEFILES=['load_egg_file.h']
+  IGATEFILES=['load_egg_file.h', 'save_egg_file.h']
   TargetAdd('libp3egg2pg.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libp3egg2pg.in', opts=['IMOD:panda3d.egg', 'ILIB:libp3egg2pg', 'SRCDIR:panda/src/egg2pg'])
 
@@ -5185,7 +5185,7 @@ if (GetTarget() == 'android' and PkgSkip("EGL")==0 and PkgSkip("GLES")==0 and no
 #
 
 if (not RUNTIME and (GetTarget() in ('windows', 'darwin') or PkgSkip("X11")==0) and PkgSkip("TINYDISPLAY")==0):
-  OPTS=['DIR:panda/src/tinydisplay', 'BUILDING:TINYDISPLAY']
+  OPTS=['DIR:panda/src/tinydisplay', 'BUILDING:TINYDISPLAY', 'X11']
   TargetAdd('p3tinydisplay_composite1.obj', opts=OPTS, input='p3tinydisplay_composite1.cxx')
   TargetAdd('p3tinydisplay_composite2.obj', opts=OPTS, input='p3tinydisplay_composite2.cxx')
   TargetAdd('p3tinydisplay_ztriangle_1.obj', opts=OPTS, input='ztriangle_1.cxx')
