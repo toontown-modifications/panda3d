@@ -2042,10 +2042,6 @@ set_state_and_transform(const RenderState *target_rs,
         target_rs->get_attrib(MaterialAttrib::get_class_slot())) {
       altered |= Shader::SSD_material;
     }
-    if (state_rs->get_attrib(ShaderAttrib::get_class_slot()) !=
-        target_rs->get_attrib(ShaderAttrib::get_class_slot())) {
-      altered |= Shader::SSD_shaderinputs;
-    }
     if (state_rs->get_attrib(FogAttrib::get_class_slot()) !=
         target_rs->get_attrib(FogAttrib::get_class_slot())) {
       altered |= Shader::SSD_fog;
@@ -2067,6 +2063,11 @@ set_state_and_transform(const RenderState *target_rs,
       altered |= Shader::SSD_texture;
     }
     _state_rs = target_rs;
+  }
+
+  if (_shader_attrib.get_orig() != _glgsg->_target_shader || _shader_attrib.was_deleted()) {
+    altered |= Shader::SSD_shaderinputs;
+    _shader_attrib = _glgsg->_target_shader;
   }
 
   // Is this the first time this shader is used this frame?
@@ -2461,7 +2462,7 @@ update_shader_vertex_arrays(ShaderContext *prev, bool force) {
       }
 
       GLint p = bind._id._seqno;
-      max_p = max(max_p, p + 1);
+      max_p = max(max_p, p + bind._elements);
 
       // Don't apply vertex colors if they are disabled with a ColorAttrib.
       int num_elements, element_stride, divisor;
