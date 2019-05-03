@@ -1009,11 +1009,21 @@ if (COMPILER=="GCC"):
 
     if GetTarget() == 'darwin':
         LibName("ALWAYS", "-framework AppKit")
+        LibName("IOKIT", "-framework IOKit")
+        LibName("QUARTZ", "-framework Quartz")
         LibName("AGL", "-framework AGL")
         LibName("CARBON", "-framework Carbon")
         LibName("COCOA", "-framework Cocoa")
         # Fix for a bug in OSX Leopard:
         LibName("GL", "-dylib_file /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib:/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib")
+
+        # Temporary exceptions to removal of this flag
+        if not PkgSkip("ROCKET"):
+            LibName("ROCKET", "-undefined dynamic_lookup")
+        if not PkgSkip("FFMPEG"):
+            LibName("FFMPEG", "-undefined dynamic_lookup")
+        if not PkgSkip("ASSIMP"):
+            LibName("ASSIMP", "-undefined dynamic_lookup")
 
     if GetTarget() == 'android':
         LibName("ALWAYS", '-llog')
@@ -1140,6 +1150,7 @@ def BracketNameWithQuotes(name):
     # Workaround for OSX bug - compiler doesn't like those flags quoted.
     if (name.startswith("-framework")): return name
     if (name.startswith("-dylib_file")): return name
+    if (name.startswith("-undefined ")): return name
 
     # Don't add quotes when it's not necessary.
     if " " not in name: return name
@@ -1813,9 +1824,11 @@ def CompileLink(dll, obj, opts):
                 cmd += ' -Wl,--allow-shlib-undefined'
         else:
             if (GetTarget() == "darwin"):
-                cmd = cxx + ' -undefined dynamic_lookup'
-                if ("BUNDLE" in opts or GetOrigExt(dll) == ".pyd"):
-                    cmd += ' -bundle '
+                cmd = cxx
+                if GetOrigExt(dll) == ".pyd":
+                    cmd += ' -bundle -undefined dynamic_lookup'
+                elif "BUNDLE" in opts:
+                    cmd += ' -bundle'
                 else:
                     install_name = '@loader_path/../lib/' + os.path.basename(dll)
                     cmd += ' -dynamiclib -install_name ' + install_name
@@ -4203,7 +4216,7 @@ if (not RUNTIME):
   OPTS=['DIR:panda/metalibs/panda', 'BUILDING:PANDA', 'JPEG', 'PNG', 'HARFBUZZ',
       'TIFF', 'OPENEXR', 'ZLIB', 'OPENSSL', 'FREETYPE', 'FFTW', 'ADVAPI', 'WINSOCK2',
       'SQUISH', 'NVIDIACG', 'VORBIS', 'OPUS', 'WINUSER', 'WINMM', 'WINGDI', 'IPHLPAPI',
-      'SETUPAPI']
+      'SETUPAPI', 'IOKIT']
 
   TargetAdd('panda_panda.obj', opts=OPTS, input='panda.cxx')
 
@@ -4842,7 +4855,7 @@ if (GetTarget() == 'darwin' and PkgSkip("COCOA")==0 and PkgSkip("GL")==0 and not
   if (PkgSkip('PANDAFX')==0):
     TargetAdd('libpandagl.dll', input='libpandafx.dll')
   TargetAdd('libpandagl.dll', input=COMMON_PANDA_LIBS)
-  TargetAdd('libpandagl.dll', opts=['MODULE', 'GL', 'NVIDIACG', 'CGGL', 'COCOA', 'CARBON'])
+  TargetAdd('libpandagl.dll', opts=['MODULE', 'GL', 'NVIDIACG', 'CGGL', 'COCOA', 'CARBON', 'QUARTZ'])
 
 #
 # DIRECTORY: panda/src/wgldisplay/
