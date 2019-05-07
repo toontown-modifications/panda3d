@@ -5361,9 +5361,9 @@ if (PkgSkip("DIRECT")==0):
   PyTargetAdd('direct_module.obj', input='libp3distributed.in')
   PyTargetAdd('direct_module.obj', input='libp3motiontrail.in')
 
-if NIRAI_MODE:
+  if NIRAI_MODE:
     PyTargetAdd('direct_module.obj', opts=['IMOD:panda3d.direct', 'ILIB:%s' % ('direct'), 'IMPORT:panda3d.core'])
-else:
+  else:
     PyTargetAdd('direct_module.obj', opts=['IMOD:panda3d.direct', 'ILIB:direct', 'IMPORT:panda3d.core'])
 
   PyTargetAdd('direct.pyd', input='libp3dcparser_igate.obj')
