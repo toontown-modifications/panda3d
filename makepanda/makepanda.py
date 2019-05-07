@@ -64,7 +64,7 @@ COREAPI_VERSION=None
 PLUGIN_VERSION=None
 OSXTARGET=None
 HOST_URL=None
-global STRDXSDKVERSION, BOOUSEINTELCOMPILER
+global STRDXSDKVERSION, BOOUSEINTELCOMPILER, NIRAI_MODE
 STRDXSDKVERSION = 'default'
 WINDOWS_SDK = None
 MSVC_VERSION = None
@@ -72,6 +72,7 @@ BOOUSEINTELCOMPILER = False
 OPENCV_VER_23 = False
 PLATFORM = None
 COPY_PYTHON = True
+NIRAI_MODE = False
 
 if "MACOSX_DEPLOYMENT_TARGET" in os.environ:
     OSXTARGET=os.environ["MACOSX_DEPLOYMENT_TARGET"]
@@ -159,6 +160,7 @@ def usage(problem):
     print("  --windows-sdk=X   (specify Windows SDK version, eg. 7.0, 7.1 or 10.  Default is 7.1)")
     print("  --msvc-version=X  (specify Visual C++ version, eg. 10, 11, 12, 14, 14.1, 14.2.  Default is 14)")
     print("  --use-icl         (experimental setting to use an intel compiler instead of MSVC on Windows)")
+    print("  --nirai         (enable Nirai support)")
     print("")
     print("The simplest way to compile panda is to just type:")
     print("")
@@ -172,6 +174,7 @@ def parseopts(args):
     global DEBVERSION,WHLVERSION,RPMRELEASE,GIT_COMMIT,P3DSUFFIX,RTDIST_VERSION
     global STRDXSDKVERSION, WINDOWS_SDK, MSVC_VERSION, BOOUSEINTELCOMPILER
     global COPY_PYTHON
+    global NIRAI_MODE
 
     # Options for which to display a deprecation warning.
     removedopts = [
@@ -186,7 +189,7 @@ def parseopts(args):
         "version=","lzma","no-python","threads=","outputdir=","override=",
         "static","host=","debversion=","rpmrelease=","p3dsuffix=","rtdist-version=",
         "directx-sdk=", "windows-sdk=", "msvc-version=", "clean", "use-icl",
-        "target=", "arch=", "git-commit=", "no-copy-python",
+        "target=", "arch=", "git-commit=", "no-copy-python", "nirai",
         ] + removedopts
 
     anything = 0
@@ -251,6 +254,7 @@ def parseopts(args):
             elif (option=="--use-icl"): BOOUSEINTELCOMPILER = True
             elif (option=="--clean"): clean_build = True
             elif (option=="--no-copy-python"): COPY_PYTHON = False
+            elif (option=="--nirai"): NIRAI_MODE = True
             elif (option[2:] in removedopts):
                 Warn("Ignoring removed option %s" % (option))
             else:
@@ -579,6 +583,8 @@ if GetHost() == 'windows' and GetTarget() == 'windows':
     SdkLocateVisualStudio(MSVC_VERSION)
 else:
     COMPILER = "GCC"
+
+print("Nirai support: %s" % (NIRAI_MODE))
 
 SetupBuildEnvironment(COMPILER)
 
@@ -5354,7 +5360,11 @@ if (PkgSkip("DIRECT")==0):
   PyTargetAdd('direct_module.obj', input='libp3interval.in')
   PyTargetAdd('direct_module.obj', input='libp3distributed.in')
   PyTargetAdd('direct_module.obj', input='libp3motiontrail.in')
-  PyTargetAdd('direct_module.obj', opts=['IMOD:panda3d.direct', 'ILIB:direct', 'IMPORT:panda3d.core'])
+
+if NIRAI_MODE:
+    PyTargetAdd('direct_module.obj', opts=['IMOD:panda3d.direct', 'ILIB:%s' % ('direct'), 'IMPORT:panda3d.core'])
+else:
+    PyTargetAdd('direct_module.obj', opts=['IMOD:panda3d.direct', 'ILIB:direct', 'IMPORT:panda3d.core'])
 
   PyTargetAdd('direct.pyd', input='libp3dcparser_igate.obj')
   PyTargetAdd('direct.pyd', input='libp3showbase_igate.obj')
