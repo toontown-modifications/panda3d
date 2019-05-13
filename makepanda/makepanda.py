@@ -1032,6 +1032,8 @@ if (COMPILER=="GCC"):
             LibName("ASSIMP", "-undefined dynamic_lookup")
         if not PkgSkip("OPENEXR"):
             LibName("OPENEXR", "-undefined dynamic_lookup")
+        if not PkgSkip("VRPN"):
+            LibName("VRPN", "-undefined dynamic_lookup")
 
     if GetTarget() == 'android':
         LibName("ALWAYS", '-llog')
@@ -3689,6 +3691,7 @@ IGATEFILES += [
     "globPattern_ext.h",
     "pandaFileStream.h",
     "lineStream.h",
+    "iostream_ext.h",
 ]
 TargetAdd('libp3dtoolutil.in', opts=OPTS, input=IGATEFILES)
 TargetAdd('libp3dtoolutil.in', opts=['IMOD:panda3d.core', 'ILIB:libp3dtoolutil', 'SRCDIR:dtool/src/dtoolutil'])
