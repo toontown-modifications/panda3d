@@ -1,17 +1,14 @@
-import collections
-
-from panda3d.core import *
-from panda3d.direct import *
-from .MsgTypes import *
+from pandac.PandaModules import *
+from MsgTypes import *
 from direct.showbase import ShowBase # __builtin__.config
 from direct.task.TaskManagerGlobal import * # taskMgr
 from direct.directnotify import DirectNotifyGlobal
-from .ConnectionRepository import ConnectionRepository
-from .PyDatagram import PyDatagram
-from .PyDatagramIterator import PyDatagramIterator
-from .AstronDatabaseInterface import AstronDatabaseInterface
-from .NetMessenger import NetMessenger
-
+from ConnectionRepository import ConnectionRepository
+from PyDatagram import PyDatagram
+from PyDatagramIterator import PyDatagramIterator
+from AstronDatabaseInterface import AstronDatabaseInterface
+from NetMessenger import NetMessenger
+import collections
 
 # Helper functions for logging output:
 def msgpack_length(dg, length, fix, maxfix, tag8, tag16, tag32):
@@ -36,7 +33,7 @@ def msgpack_encode(dg, element):
         dg.addUint8(0xc2)
     elif element is True:
         dg.addUint8(0xc3)
-    elif isinstance(element, int):
+    elif isinstance(element, (int, long)):
         if -32 <= element < 128:
             dg.addInt8(element)
         elif 128 <= element < 256:
@@ -74,12 +71,12 @@ def msgpack_encode(dg, element):
         msgpack_length(dg, len(element), 0x90, 0x10, None, 0xdc, 0xdd)
         for v in element:
             msgpack_encode(dg, v)
-    elif isinstance(element, str):
+    elif isinstance(element, basestring):
         # 0xd9 is str 8 in all recent versions of the MsgPack spec, but somehow
         # Logstash bundles a MsgPack implementation SO OLD that this isn't
         # handled correctly so this function avoids it too
         msgpack_length(dg, len(element), 0xa0, 0x20, None, 0xda, 0xdb)
-        dg.appendData(bytes(element.encode()))
+        dg.appendData(element)
     elif isinstance(element, float):
         # Python does not distinguish between floats and doubles, so we send
         # everything as a double in MsgPack:
@@ -209,7 +206,7 @@ class AstronInternalRepository(ConnectionRepository):
         dg2 = PyDatagram()
         dg2.addServerControlHeader(CONTROL_ADD_POST_REMOVE)
         dg2.addUint64(self.ourChannel)
-        dg2.appendData(bytes(dg))
+        dg2.addString(dg.getMessage())
         self.send(dg2)
 
     def clearPostRemove(self):
@@ -524,7 +521,7 @@ class AstronInternalRepository(ConnectionRepository):
             dg.addServerHeader(doId, self.ourChannel, STATESERVER_OBJECT_SET_FIELDS)
             dg.addUint32(doId)
             dg.addUint16(fieldCount)
-            dg.appendData(fieldPacker.getBytes())
+            dg.appendData(fieldPacker.getString())
             self.send(dg)
             # Now slide it into the zone we expect to see it in (so it
             # generates onto us with all of the fields in place)
@@ -684,7 +681,7 @@ class AstronInternalRepository(ConnectionRepository):
 
         dg = PyDatagram()
         msgpack_encode(dg, log)
-        self.eventSocket.Send(bytes(dg).hex())
+        self.eventSocket.Send(dg.getMessage())
 
     def setAI(self, doId, aiChannel):
         """
