@@ -159,9 +159,12 @@ class _DiscordRpc(object):
                         # just in case
                         self.__join_ask_queue.task_done()
                     except QueueEmpty:
-                        pass
+                        break
             if len(users) > 0:
                 self._run_callback('joinRequest', users)
+                self._log('debug', "Users requesting to join: {}".format(users))
+            else:
+                self._log('debug', "No users requesting to join game.")
 
         if not is_connected and was_disconnected:
             with self.__handler_lock:
@@ -186,7 +189,7 @@ class _DiscordRpc(object):
                     break
                 evt = data.get('evt')
                 nonce = data.get('nonce')
-                if nonce:
+                if nonce is not None:
                     err_data = data.get('data', dict())
                     if evt is not None and evt == 'ERROR':
                         self._last_err = [err_data.get('code', 0), err_data.get('message', '')]
@@ -240,6 +243,7 @@ class _DiscordRpc(object):
                         self.__send_queue.task_done()
                     except QueueEmpty:
                         self._log('debug', 'Wrote queue of send data to IPC.')
+                        break
 
     def __presence_to_json(self, **kwargs):
         """Creates json rich presence info."""
@@ -362,7 +366,7 @@ class _DiscordRpc(object):
 
     def respond(self, user_id, reply):
         if self.connection is None or not self.connection.is_open:
-            self._log('debug', 'Cannot reply to discord user {}; connection not established!'.format(user_id))
+            self._log('warning', 'Cannot reply to discord user {}; connection not established!'.format(user_id))
             return
         response = dict()
         if reply == DISCORD_REPLY_YES:
@@ -375,10 +379,10 @@ class _DiscordRpc(object):
         response['nonce'] = str(self.nonce)
         self.__nonce += 1
         if not self.__send_queue.full():
-            self.__send_queue.put(response)
+            self.__send_queue.put(json.dumps(response))
             self._log('debug', 'Queued reply: {}'.format(response))
         else:
-            self._log('debug', 'Cannot reply to discord user {}; send queue is full!')
+            self._log('warning', 'Cannot reply to discord user {}; send queue is full!')
 
     def last_error(self):
         return self._last_err[0], self._last_err[1]
@@ -399,10 +403,11 @@ class _DiscordRpc(object):
             self.set_callback(name, callback_info)
 
     def set_callback(self, callback_name, callback):
-        callback_name = callback_name.strip().lower()
+        callback_name = callback_name.strip()
         if callback_name in ('ready', 'disconnected', 'joinGame', 'spectateGame', 'joinRequest', 'error'):
-            if not is_callable(callback):
-                raise TypeError('Callback must be callable!')
+            if callback and not is_callable(callback):
+                raise TypeError('Callback must be callable! Callback name: {}, callback: {}'.format(callback_name,
+                                                                                                    callback))
             self.__callbacks[callback_name] = callback
 
     def update_handlers(self):
@@ -420,12 +425,16 @@ class _DiscordRpc(object):
             if not self.__registered_handlers[handler] and self.__callbacks[handler] is not None:
                 if not self.__register_event(event):
                     self._log('warning', 'Unable to register event "{}"'.format(event))
+                else:
+                    self._log('info', "Registered handler {}".format(handler))
             elif self.__registered_handlers[handler] and self.__callbacks[handler] is None:
                 if not self.__unregister_event(event):
                     self._log('warning', 'Unable to unregister event "{}"'.format(event))
+                else:
+                    self._log('debug', 'Unregistered event {}'.format(event))
 
     def _run_callback(self, callback_name, *args):
-        callback_name = callback_name.strip().lower()
+        callback_name = callback_name.strip()
         if callback_name in self.__callbacks:
             if self.__callbacks[callback_name] is not None:
                 callback = self.__callbacks[callback_name]
@@ -557,6 +566,7 @@ class _UpdateConnection(Thread):
                     # we have shut down, break and return
                     break
                 _discord_rpc.update_connection()
+                _discord_rpc.run_callbacks()
 
 
 def initialize(app_id, pid=None, callbacks=None, pipe_no=0, time_call=None, auto_update_connection=False,
