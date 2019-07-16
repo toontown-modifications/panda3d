@@ -216,7 +216,7 @@ class _DiscordRpc(object):
                             continue
                         # the avatar hash to grab from https://cdn.discordapp.com/
                         # can be None/empty string
-                        avatar = read_data.get('avatar', None)
+                        avatar = user.get('avatar', None)
                         if not self.__join_ask_queue.full():
                             user_data = {'id': uid,
                                          'username': uname,
@@ -462,7 +462,8 @@ class _DiscordRpc(object):
             if any(x is None for x in (uid, uname)):
                 self._log('warning', 'Discord failed to send current user data.')
             else:
-                discrim = user.get('discriminator', None)
+                discrim = user.get('discriminator', None)   # i'm not sure why this can be None for current user, but
+                                                            # not others...
                 avatar = user.get('avatar', None)
                 self.__connected_user['id'] = uid
                 self.__connected_user['username'] = uname
