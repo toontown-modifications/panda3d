@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 """
 Python Rich Presence library for Discord
 """
@@ -7,7 +7,8 @@ from copy import deepcopy
 import logging
 from threading import Lock, Thread
 from .connection.rpc import RpcConnection
-from .util.utils import get_process_id, is_callable, iter_items, iter_keys, is_python3, bytes, unicode
+from .util.utils import get_process_id, is_callable, iter_items, iter_keys, is_python3, bytes, unicode, is_linux, \
+    is_windows, get_executable_path
 from .util.types import Int32, Int64
 import json
 import time
@@ -23,17 +24,22 @@ except ImportError:
         # create a fake Queue class that'll do nothing
         # and without killing the program
         from .util.utils import DummyQueue as Queue
-
-        class QueueEmpty(Exception):
-            pass
+        from .util.utils import Empty as QueueEmpty
 from os import path, makedirs
 if not is_python3():
     import requests
 else:
     from urllib.request import urlopen, Request
+from os import environ, system
+from sys import stderr
+if is_windows():
+    if is_python3():
+        import winreg
+    else:
+        import _winreg as winreg
 
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 PROJECT_URL = "https://gitlab.com/somberdemise/discord-rpc.py"
 
 DISCORD_REPLY_NO = 0
@@ -91,7 +97,7 @@ class _DiscordRpc(object):
     __http_rate_limit = None
 
     def __init__(self, app_id, pid=None, pipe_no=0, log=True, logger=None, log_file=None, log_level=logging.INFO,
-                 callbacks=None, auto_register=False, steam_id=None):
+                 callbacks=None):
         if pid is not None:
             if not isinstance(pid, int):
                 raise TypeError('PID must be of int type!')
@@ -582,7 +588,7 @@ class _UpdateConnection(Thread):
 
 def initialize(app_id, pid=None, callbacks=None, pipe_no=0, time_call=None, auto_update_connection=False,
                log=True, logger=None, log_file=None, log_level=logging.INFO,
-               auto_register=False, steam_id=None):
+               auto_register=False, steam_id=None, command=None):
     """
     Initializes and connects to the Discord Rich Presence RPC
     :param app_id:          The Client ID from Discord (see https://github.com/discordapp/discord-rpc#basic-usage)
@@ -605,6 +611,7 @@ def initialize(app_id, pid=None, callbacks=None, pipe_no=0, time_call=None, auto
                             nothing)
     :param steam_id:        The applications steam ID for auto-register (defaults to regular program registration, or
                             nothing if auto_register is False) (NOTE: Also does nothing currently)
+    :param command:         The command to use for protocol registration (ex: /path/to/file --discord)
     :return:                N/A
     """
     global _discord_rpc
@@ -614,8 +621,10 @@ def initialize(app_id, pid=None, callbacks=None, pipe_no=0, time_call=None, auto
     if _discord_rpc is not None:
         # don't initialize more than once
         return
+    if auto_register:
+        register_game(app_id=app_id, steam_id=steam_id, command=command)
     _discord_rpc = _DiscordRpc(app_id, pid=pid, pipe_no=pipe_no, log=log, logger=logger, log_file=log_file,
-                               log_level=log_level, callbacks=callbacks, auto_register=auto_register, steam_id=steam_id)
+                               log_level=log_level, callbacks=callbacks)
     if time_call is not None:
         _discord_rpc.time_now = time_call
 
@@ -762,6 +771,9 @@ def download_profile_picture(user_id, avatar_hash=None, cache_dir="cache", game_
         req = requests.get(url, headers=headers)
         status_code = req.status_code
     if status_code != 200:
+        if status_code == 404:
+            # nonexistent avatar/hash; return None
+            return None
         if 'X-RateLimit-Reset' in req.headers:
             _http_rate_limit = int(req.headers['X-RateLimit-Reset'])
         else:
@@ -787,6 +799,99 @@ def download_profile_picture(user_id, avatar_hash=None, cache_dir="cache", game_
     return avatar_file
 
 
+def register_game(app_id, steam_id=None, command=None):
+    """
+    Registers a protocol Discord can use to run your game.
+    :param app_id:      The Client ID from Discord (see https://github.com/discordapp/discord-rpc#basic-usage)
+                        (NOTE: Must be a string)
+    :param steam_id:    The applications steam ID for auto-register (defaults to regular program registration)
+    :param command:     The command to use for protocol registration (ex: /path/to/file --discord)
+    :return:
+    """
+    if command is None and steam_id is None and (is_windows() or is_linux()):
+        command = get_executable_path()
+    if is_linux():
+        # linux is the easiest
+        if steam_id:
+            command = "xdg-open steam://rungameid/{}".format(steam_id)
+        home = environ.get('HOME')
+        if home is None or home.strip() == '':
+            # no home? no registration!
+            return
+        file_contents = "[Desktop Entry]\nName=Game {app_id}\nExec=\"{command}\" %u\nType=Application\n" + \
+                        "NoDisplay=true\nCategories=Discord;Games;\nMimeType=x-scheme-handler/discord-{app_id};\n"
+        file_contents = file_contents.format(app_id=app_id, command=command)
+        if home.endswith('/'):
+            home = home[:-1]
+        # we don't really need to here, but oh well
+        path_location = path.join(home, ".local", "share", "applications")
+        if not path.exists(path_location):
+            makedirs(path_location, 0o700)
+        with open(path.join(path_location, "discord-{}.desktop".format(app_id)), 'w') as f:
+            f.write(file_contents)
+        sys_call = "xdg-mime default discord-{0}.desktop x-scheme-handler/discord-{0}".format(app_id)
+        if system(sys_call) < 0:
+            print("Failed to register mime handler!", file=stderr)
+    elif is_windows():
+        def read_key(reg_path, name):
+            try:
+                root_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_READ)
+                value, reg_type = winreg.QueryValueEx(root_key, name)
+                winreg.CloseKey(root_key)
+                return value
+            except WindowsError:
+                return None
+
+        def write_key(reg_path, name, value):
+            try:
+                # I know this can return a key if it exists, but oh well
+                winreg.CreateKey(winreg.HKEY_CURRENT_USER, reg_path)
+                root_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, reg_path, 0, winreg.KEY_WRITE)
+                winreg.SetValueEx(root_key, name, 0, winreg.REG_SZ, value)
+                winreg.CloseKey(root_key)
+                return True
+            except WindowsError:
+                return False
+
+        if steam_id:
+            tmp = read_key(r"Software\Valve\Steam", "SteamExe")
+            if tmp is not None and tmp.strip() != '':
+                command = "\"{}\" steam://rungameid/{}".format(tmp.replace("/", "\\"), steam_id)
+
+        protocol_desc = "URL:Run game {} protocol".format(app_id)
+        protocol_path = r"Software\Classes\{}".format("discord-{}".format(app_id))
+        if not write_key(protocol_path, None, protocol_desc):
+            # failed to write the key
+            print("Error writing description!", file=stderr)
+        if not write_key(protocol_path, "URL Protocol", "0"):
+            print("Error writing description!", file=stderr)
+        if not write_key(protocol_path, "DefaultIcon", get_executable_path()):
+            print("Error writing key!", file=stderr)
+        if not write_key(protocol_path, r"shell\open\command", command):
+            print("Error writing command!", file=stderr)
+    else:
+        # assume Mac OSX here
+        def register_url(aid):
+            print("Url registration under Mac OSX unimplemented. Cannot create for app ID {}".format(id), file=stderr)
+
+        def register_command(aid, cmd):
+            home = path.expanduser("~")
+            if home is None or home.strip() == '':
+                return
+            discord_path = path.join(home, "Library", "Application Support", "discord", "games")
+            if not path.exists(discord_path):
+                makedirs(discord_path)
+            with open(path.join(discord_path, "{}.json".format(aid)), 'w') as f:
+                f.write("{\"command\": \"{}\"}".format(cmd))
+
+        if steam_id:
+            command = "steam://rungameid/{}".format(steam_id)
+        if command:
+            register_command(app_id, command)
+        else:
+            register_url(app_id)
+
+
 __all__ = ['DISCORD_REPLY_NO', 'DISCORD_REPLY_YES', 'DISCORD_REPLY_IGNORE', 'initialize', 'shutdown', 'run_callbacks',
            'update_connection', 'update_presence', 'clear_presence', 'respond', 'VERSION', 'PROJECT_URL',
-           'download_profile_picture']
+           'download_profile_picture', 'register_game']

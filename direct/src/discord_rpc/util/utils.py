@@ -1,8 +1,12 @@
 from copy import deepcopy
 import json
-from os import getenv, getpid
+from os import getenv, getpid, path
 import platform
-from sys import version_info
+from sys import version_info, argv
+
+
+class Empty(Exception):
+    pass
 
 
 class DummyQueue(object):
@@ -29,10 +33,10 @@ class DummyQueue(object):
         pass
 
     def get(self, *args, **kwargs):
-        pass
+        raise Empty
 
     def get_nowait(self):
-        pass
+        raise Empty
 
     def task_done(self):
         pass
@@ -47,6 +51,15 @@ def is_python3():
 
 def is_windows():
     return platform.system() == 'Windows'
+
+
+def is_linux():
+    return platform.system() == 'Linux'
+
+
+def is_mac_osx():
+    # this may not be accurate, just going off of what I find off the internet
+    return platform.system() == 'Darwin'
 
 
 def get_temp_path():
@@ -157,3 +170,11 @@ if not is_python3():
     range = xrange
 else:
     range = range
+
+
+def get_executable_directory():
+    return path.abspath(path.dirname(argv[0]))
+
+
+def get_executable_path():
+    return path.join(get_executable_directory(), argv[0])
