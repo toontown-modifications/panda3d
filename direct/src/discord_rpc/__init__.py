@@ -7,7 +7,7 @@ from copy import deepcopy
 import logging
 from threading import Lock, Thread
 from .connection.rpc import RpcConnection
-from .util.utils import get_process_id, is_callable, iter_items, iter_keys
+from .util.utils import get_process_id, is_callable, iter_items, iter_keys, is_python3, bytes, unicode
 from .util.types import Int32, Int64
 import json
 import time
@@ -26,7 +26,15 @@ except ImportError:
 
         class QueueEmpty(Exception):
             pass
+from os import path, makedirs
+if not is_python3():
+    import requests
+else:
+    from urllib.request import urlopen, Request
 
+
+VERSION = "1.1.0"
+PROJECT_URL = "https://gitlab.com/somberdemise/discord-rpc.py"
 
 DISCORD_REPLY_NO = 0
 DISCORD_REPLY_YES = 1
@@ -37,6 +45,7 @@ _discord_rpc = None
 _auto_update_connection = False
 _update_thread = None
 _connection_lock = Lock()
+_http_rate_limit = None
 
 
 class _DiscordRpc(object):
@@ -79,6 +88,7 @@ class _DiscordRpc(object):
         'spectateGame': False,
         'joinRequest': False,
     }
+    __http_rate_limit = None
 
     def __init__(self, app_id, pid=None, pipe_no=0, log=True, logger=None, log_file=None, log_level=logging.INFO,
                  callbacks=None, auto_register=False, steam_id=None):
@@ -702,5 +712,81 @@ def respond(user_id, response):
         _discord_rpc.respond(user_id, response)
 
 
+def download_profile_picture(user_id, avatar_hash=None, cache_dir="cache", game_name=None, game_version=None,
+                             game_url=None):
+    """
+    Download a discord user's profile picture.
+    :param user_id:         The discord user's ID
+    :param avatar_hash:     (optional) The discord user's avatar hash. NOTE: if None, returns None
+    :param cache_dir:       (optional) Path to store the profile picture
+    :param game_name:       (optional) The name of the game that is running
+    :param game_version:    (optional) The game's version number
+    :param game_url:        (optional) The game's website
+    :return:                Path to profile picture, or None
+    """
+    global _http_rate_limit
+    if avatar_hash is None:
+        return None
+    url = "https://cdn.discordapp.com/avatars/{}/{}.jpg?size=2048".format(user_id, avatar_hash)
+    # NOTE: we default to "./cache" if no path specified
+    download_folder = path.join(cache_dir, user_id)
+    if not path.exists(download_folder):
+        makedirs(download_folder, 0o755)
+    avatar_file = path.join(download_folder, avatar_hash) + '.jpg'
+    if path.exists(avatar_file):
+        # technically, we downloaded it, so no need to worry about downloading
+        return avatar_file
+    # we check this after just in case we already have a cached image
+    if _http_rate_limit is not None:
+        if not _http_rate_limit > time.time():
+            return None
+    # we're required to have a ua string
+    ua_str = "discord-rpc.py ({url}, {version})".format(url=PROJECT_URL, version=VERSION)
+    if game_name is not None and isinstance(game_name, (bytes, unicode)) and game_name.strip() != '':
+        # if we have a game name, append that
+        ua_str += ' {}'.format(game_name)
+        if all((x is not None and isinstance(x, (bytes, unicode)) and x.strip() != '') for x in (game_version,
+                                                                                                 game_url)):
+            # if we have both a url and version number, append those too
+            ua_str += " ({url}, {version}".format(url=game_url, version=game_version)
+    headers = {'User-Agent': ua_str}
+    if is_python3():
+        r = Request(
+            url,
+            data=None,
+            headers=headers
+        )
+        req = urlopen(r)
+        status_code = req.getcode()
+    else:
+        req = requests.get(url, headers=headers)
+        status_code = req.status_code
+    if status_code != 200:
+        if 'X-RateLimit-Reset' in req.headers:
+            _http_rate_limit = int(req.headers['X-RateLimit-Reset'])
+        else:
+            try:
+                if is_python3():
+                    data = req.read()
+                    json_data = json.loads(data.decode(req.info().get_content_charset('utf-8')))
+                else:
+                    json_data = req.json()
+                if 'retry_after' in json_data:
+                    _http_rate_limit = time.time() + (int(json_data['retry_after']) / 1000)
+            except Exception:
+                pass
+        if _http_rate_limit is None:
+            # try again in 15 min (Discord shouldn't kill us for waiting 15 min anyways...)
+            _http_rate_limit = time.time() + (15 * 60)
+        return None
+    with open(avatar_file, 'wb') as f:
+        if is_python3():
+            f.write(req.read())
+        else:
+            f.write(req.content)
+    return avatar_file
+
+
 __all__ = ['DISCORD_REPLY_NO', 'DISCORD_REPLY_YES', 'DISCORD_REPLY_IGNORE', 'initialize', 'shutdown', 'run_callbacks',
-           'update_connection', 'update_presence', 'clear_presence', 'respond']
+           'update_connection', 'update_presence', 'clear_presence', 'respond', 'VERSION', 'PROJECT_URL',
+           'download_profile_picture']

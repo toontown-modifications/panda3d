@@ -75,8 +75,10 @@ def is_callable(obj):
 # python 2 + 3 compatibility
 if is_python3():
     unicode = str
+    bytes = bytes
 else:
     bytes = str
+    unicode = unicode
 
 
 def to_bytes(obj):
@@ -153,3 +155,5 @@ def json2dict(obj):
 
 if not is_python3():
     range = xrange
+else:
+    range = range
