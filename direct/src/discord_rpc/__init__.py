@@ -39,7 +39,7 @@ if is_windows():
         import _winreg as winreg
 
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 PROJECT_URL = "https://gitlab.com/somberdemise/discord-rpc.py"
 
 DISCORD_REPLY_NO = 0
@@ -863,11 +863,11 @@ def register_game(app_id, steam_id=None, command=None):
         if not write_key(protocol_path, None, protocol_desc):
             # failed to write the key
             print("Error writing description!", file=stderr)
-        if not write_key(protocol_path, "URL Protocol", "0"):
+        if not write_key(protocol_path, "URL Protocol", None):
             print("Error writing description!", file=stderr)
-        if not write_key(protocol_path, "DefaultIcon", get_executable_path()):
+        if not write_key(protocol_path + r"\DefaultIcon", None, get_executable_path()):
             print("Error writing key!", file=stderr)
-        if not write_key(protocol_path, r"shell\open\command", command):
+        if not write_key(protocol_path + r"\shell\open\command", None, command):
             print("Error writing command!", file=stderr)
     else:
         # assume Mac OSX here
