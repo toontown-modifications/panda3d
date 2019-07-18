@@ -39,7 +39,7 @@ if is_windows():
         import _winreg as winreg
 
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 PROJECT_URL = "https://gitlab.com/somberdemise/discord-rpc.py"
 
 DISCORD_REPLY_NO = 0
@@ -818,7 +818,7 @@ def register_game(app_id, steam_id=None, command=None):
         if home is None or home.strip() == '':
             # no home? no registration!
             return
-        file_contents = "[Desktop Entry]\nName=Game {app_id}\nExec=\"{command}\" %u\nType=Application\n" + \
+        file_contents = "[Desktop Entry]\nName=Game {app_id}\nExec={command} %u\nType=Application\n" + \
                         "NoDisplay=true\nCategories=Discord;Games;\nMimeType=x-scheme-handler/discord-{app_id};\n"
         file_contents = file_contents.format(app_id=app_id, command=command)
         if home.endswith('/'):
