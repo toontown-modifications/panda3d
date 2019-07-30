@@ -722,7 +722,7 @@ def respond(user_id, response):
 
 
 def download_profile_picture(user_id, avatar_hash=None, cache_dir="cache", game_name=None, game_version=None,
-                             game_url=None):
+                             game_url=None, cert_file=None):
     """
     Download a discord user's profile picture.
     :param user_id:         The discord user's ID
@@ -731,6 +731,7 @@ def download_profile_picture(user_id, avatar_hash=None, cache_dir="cache", game_
     :param game_name:       (optional) The name of the game that is running
     :param game_version:    (optional) The game's version number
     :param game_url:        (optional) The game's website
+    :param cert_file:       (optional) The path to the cacert file to use (python 2 requests only so far)
     :return:                Path to profile picture, or None
     """
     global _http_rate_limit
@@ -768,7 +769,10 @@ def download_profile_picture(user_id, avatar_hash=None, cache_dir="cache", game_
         req = urlopen(r)
         status_code = req.getcode()
     else:
-        req = requests.get(url, headers=headers)
+        if cert_file:
+            req = requests.get(url, headers=headers, verify=cert_file)
+        else:
+            req = requests.get(url, headers=headers)
         status_code = req.status_code
     if status_code != 200:
         if status_code == 404:
