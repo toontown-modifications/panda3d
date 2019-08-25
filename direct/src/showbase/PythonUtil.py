@@ -2687,6 +2687,46 @@ class PriorityCallbacks:
         for priority, callback in self._callbacks:
             callback()
 
+def recordCreationStack(cls):
+    if hasattr(cls, '__init__'):
+        raise "recordCreationStack: class '%s' must define __init__" % cls.__name__
+    cls.__moved_init__ = cls.__init__
+
+    def __recordCreationStack_init__(self, *args, **kArgs):
+        self._creationStackTrace = StackTrace(start=1)
+        return self.__moved_init__(*args, **kArgs)
+
+    def getCreationStackTrace(self):
+        return self._creationStackTrace
+
+    def getCreationStackTraceCompactStr(self):
+        return self._creationStackTrace.compact()
+
+    def printCreationStackTrace(self):
+        print self._creationStackTrace
+
+    cls.__init__ = __recordCreationStack_init__
+    cls.getCreationStackTrace = getCreationStackTrace
+    cls.getCreationStackTraceCompactStr = getCreationStackTraceCompactStr
+    cls.printCreationStackTrace = printCreationStackTrace
+    return cls
+
+def recordFunctorCreationStacks():
+    global Functor
+    from direct.showbase import DConfig
+    config = DConfig
+    if __dev__ and config.GetBool('record-functor-creation-stacks', 0):
+        if hasattr(Functor, '_functorCreationStacksRecorded'):
+            Functor = recordCreationStackStr(Functor)
+            Functor._functorCreationStacksRecorded = True
+            Functor.__call__ = Functor._exceptionLoggedCreationStack__call__
+
+def choice(condition, ifTrue, ifFalse):
+    if condition:
+        return ifTrue
+    else:
+        return ifFalse
+
 builtins.Functor = Functor
 builtins.Stack = Stack
 builtins.Queue = Queue
