@@ -1726,12 +1726,6 @@ def CompileLink(dll, obj, opts):
                     else:
                         cmd += ' /NOD:{}.lib'.format(pythonv)
 
-                # Yes, we know we are importing "locally defined symbols".
-                for x in obj:
-                    if x.endswith('libp3pystub.lib'):
-                        cmd += ' /ignore:4049,4217'
-                        break
-
             # Set the subsystem.  Specify that we want to target Windows XP.
             subsystem = GetValueOption(opts, "SUBSYSTEM:") or "CONSOLE"
             cmd += " /SUBSYSTEM:" + subsystem
@@ -3284,7 +3278,6 @@ CopyAllHeaders('dtool/src/prc', skip=["prc_parameters.h"])
 CopyAllHeaders('dtool/src/dconfig')
 CopyAllHeaders('dtool/src/interrogatedb')
 CopyAllHeaders('dtool/metalibs/dtoolconfig')
-CopyAllHeaders('dtool/src/pystub')
 CopyAllHeaders('dtool/src/interrogate')
 CopyAllHeaders('dtool/src/test_interrogate')
 CopyAllHeaders('panda/src/putil')
@@ -3588,17 +3581,6 @@ PyTargetAdd('interrogatedb.pyd', input='interrogatedb_pydtool.obj')
 PyTargetAdd('interrogatedb.pyd', input='libp3dtool.dll')
 PyTargetAdd('interrogatedb.pyd', input='libp3dtoolconfig.dll')
 PyTargetAdd('interrogatedb.pyd', input='libp3interrogatedb.dll')
-
-#
-# DIRECTORY: dtool/src/pystub/
-#
-
-if not RUNTIME and not RTDIST:
-  OPTS=['DIR:dtool/src/pystub']
-  TargetAdd('p3pystub_pystub.obj', opts=OPTS, input='pystub.cxx')
-  TargetAdd('libp3pystub.lib', input='p3pystub_pystub.obj')
-  #TargetAdd('libp3pystub.lib', input='libp3dtool.dll')
-  TargetAdd('libp3pystub.lib', opts=['ADVAPI'])
 
 #
 # DIRECTORY: dtool/src/interrogate/
@@ -5262,11 +5244,11 @@ if (PkgSkip("DIRECT")==0):
 if (PkgSkip("DIRECT")==0):
   OPTS=['DIR:direct/src/dcparser', 'BUILDING:DIRECT_DCPARSER', 'WITHINPANDA', 'BISONPREFIX_dcyy']
   CreateFile(GetOutputDir()+"/include/dcParser.h")
-  PyTargetAdd('p3dcparser_dcParser.obj', opts=OPTS, input='dcParser.yxx')
+  TargetAdd('p3dcparser_dcParser.obj', opts=OPTS, input='dcParser.yxx')
   #TargetAdd('dcParser.h', input='p3dcparser_dcParser.obj', opts=['DEPENDENCYONLY'])
-  PyTargetAdd('p3dcparser_dcLexer.obj', opts=OPTS, input='dcLexer.lxx')
-  PyTargetAdd('p3dcparser_composite1.obj', opts=OPTS, input='p3dcparser_composite1.cxx')
-  PyTargetAdd('p3dcparser_composite2.obj', opts=OPTS, input='p3dcparser_composite2.cxx')
+  TargetAdd('p3dcparser_dcLexer.obj', opts=OPTS, input='dcLexer.lxx')
+  TargetAdd('p3dcparser_composite1.obj', opts=OPTS, input='p3dcparser_composite1.cxx')
+  TargetAdd('p3dcparser_composite2.obj', opts=OPTS, input='p3dcparser_composite2.cxx')
 
   OPTS=['DIR:direct/src/dcparser', 'WITHINPANDA']
   IGATEFILES=GetDirectoryContents('direct/src/dcparser', ["*.h", "*_composite*.cxx"])
@@ -5274,6 +5256,7 @@ if (PkgSkip("DIRECT")==0):
   if "dcmsgtypes.h" in IGATEFILES: IGATEFILES.remove('dcmsgtypes.h')
   TargetAdd('libp3dcparser.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libp3dcparser.in', opts=['IMOD:panda3d.direct', 'ILIB:libp3dcparser', 'SRCDIR:direct/src/dcparser'])
+  PyTargetAdd('p3dcparser_ext_composite.obj', opts=OPTS, input='p3dcparser_ext_composite.cxx')
 
 #
 # DIRECTORY: direct/src/deadrec/
@@ -5295,13 +5278,13 @@ if (PkgSkip("DIRECT")==0):
 if (PkgSkip("DIRECT")==0):
   OPTS=['DIR:direct/src/distributed', 'DIR:direct/src/dcparser', 'WITHINPANDA', 'BUILDING:DIRECT', 'OPENSSL']
   TargetAdd('p3distributed_config_distributed.obj', opts=OPTS, input='config_distributed.cxx')
-  PyTargetAdd('p3distributed_cConnectionRepository.obj', opts=OPTS, input='cConnectionRepository.cxx')
-  PyTargetAdd('p3distributed_cDistributedSmoothNodeBase.obj', opts=OPTS, input='cDistributedSmoothNodeBase.cxx')
 
   OPTS=['DIR:direct/src/distributed', 'WITHINPANDA', 'OPENSSL']
   IGATEFILES=GetDirectoryContents('direct/src/distributed', ["*.h", "*.cxx"])
   TargetAdd('libp3distributed.in', opts=OPTS, input=IGATEFILES)
   TargetAdd('libp3distributed.in', opts=['IMOD:panda3d.direct', 'ILIB:libp3distributed', 'SRCDIR:direct/src/distributed'])
+  PyTargetAdd('p3distributed_cConnectionRepository.obj', opts=OPTS, input='cConnectionRepository.cxx')
+  PyTargetAdd('p3distributed_cDistributedSmoothNodeBase.obj', opts=OPTS, input='cDistributedSmoothNodeBase.cxx')
 
 #
 # DIRECTORY: direct/src/interval/
@@ -5351,10 +5334,15 @@ if (PkgSkip("DIRECT")==0):
 
 if (PkgSkip("DIRECT")==0):
   TargetAdd('libp3direct.dll', input='p3directbase_directbase.obj')
+  TargetAdd('libp3direct.dll', input='p3dcparser_composite1.obj')
+  TargetAdd('libp3direct.dll', input='p3dcparser_composite2.obj')
+  TargetAdd('libp3direct.dll', input='p3dcparser_dcParser.obj')
+  TargetAdd('libp3direct.dll', input='p3dcparser_dcLexer.obj')
   TargetAdd('libp3direct.dll', input='p3showbase_showBase.obj')
   if GetTarget() == 'darwin':
     TargetAdd('libp3direct.dll', input='p3showbase_showBase_assist.obj')
   TargetAdd('libp3direct.dll', input='p3deadrec_composite1.obj')
+  TargetAdd('libp3direct.dll', input='p3distributed_config_distributed.obj')
   TargetAdd('libp3direct.dll', input='p3interval_composite1.obj')
   TargetAdd('libp3direct.dll', input='p3motiontrail_config_motiontrail.obj')
   TargetAdd('libp3direct.dll', input='p3motiontrail_cMotionTrail.obj')
@@ -5383,11 +5371,7 @@ if (PkgSkip("DIRECT")==0):
   # These are part of direct.pyd, not libp3direct.dll, because they rely on
   # the Python libraries.  If a C++ user needs these modules, we can move them
   # back and filter out the Python-specific code.
-  PyTargetAdd('direct.pyd', input='p3dcparser_composite1.obj')
-  PyTargetAdd('direct.pyd', input='p3dcparser_composite2.obj')
-  PyTargetAdd('direct.pyd', input='p3dcparser_dcParser.obj')
-  PyTargetAdd('direct.pyd', input='p3dcparser_dcLexer.obj')
-  PyTargetAdd('direct.pyd', input='p3distributed_config_distributed.obj')
+  PyTargetAdd('direct.pyd', input='p3dcparser_ext_composite.obj')
   PyTargetAdd('direct.pyd', input='p3distributed_cConnectionRepository.obj')
   PyTargetAdd('direct.pyd', input='p3distributed_cDistributedSmoothNodeBase.obj')
 
@@ -5401,18 +5385,13 @@ if (PkgSkip("DIRECT")==0):
 # DIRECTORY: direct/src/dcparse/
 #
 
-if (PkgSkip("PYTHON")==0 and PkgSkip("DIRECT")==0 and not RTDIST and not RUNTIME):
+if (PkgSkip("DIRECT")==0 and not RTDIST and not RUNTIME):
   OPTS=['DIR:direct/src/dcparse', 'DIR:direct/src/dcparser', 'WITHINPANDA', 'ADVAPI']
-  PyTargetAdd('dcparse_dcparse.obj', opts=OPTS, input='dcparse.cxx')
-  PyTargetAdd('p3dcparse.exe', input='p3dcparser_composite1.obj')
-  PyTargetAdd('p3dcparse.exe', input='p3dcparser_composite2.obj')
-  PyTargetAdd('p3dcparse.exe', input='p3dcparser_dcParser.obj')
-  PyTargetAdd('p3dcparse.exe', input='p3dcparser_dcLexer.obj')
-  PyTargetAdd('p3dcparse.exe', input='dcparse_dcparse.obj')
-  PyTargetAdd('p3dcparse.exe', input='libp3direct.dll')
-  PyTargetAdd('p3dcparse.exe', input=COMMON_PANDA_LIBS)
-  PyTargetAdd('p3dcparse.exe', input='libp3pystub.lib')
-  PyTargetAdd('p3dcparse.exe', opts=['ADVAPI'])
+  TargetAdd('dcparse_dcparse.obj', opts=OPTS, input='dcparse.cxx')
+  TargetAdd('p3dcparse.exe', input='dcparse_dcparse.obj')
+  TargetAdd('p3dcparse.exe', input='libp3direct.dll')
+  TargetAdd('p3dcparse.exe', input=COMMON_PANDA_LIBS)
+  TargetAdd('p3dcparse.exe', opts=['ADVAPI'])
 
 #
 # DIRECTORY: direct/src/plugin/
@@ -5616,7 +5595,6 @@ if (RUNTIME):
   TargetAdd('panda3d.exe', input='libpandaexpress.dll')
   TargetAdd('panda3d.exe', input='libp3dtoolconfig.dll')
   TargetAdd('panda3d.exe', input='libp3dtool.dll')
-  #TargetAdd('panda3d.exe', input='libp3pystub.lib')
   TargetAdd('panda3d.exe', input='libp3tinyxml.ilb')
   TargetAdd('panda3d.exe', opts=['NOICON', 'OPENSSL', 'ZLIB', 'WINGDI', 'WINUSER', 'WINSHELL', 'ADVAPI', 'WINSOCK2', 'WINOLE', 'CARBON'])
 
@@ -5630,7 +5608,6 @@ if (RUNTIME):
     TargetAdd('Panda3D.app', input='libpandaexpress.dll')
     TargetAdd('Panda3D.app', input='libp3dtoolconfig.dll')
     TargetAdd('Panda3D.app', input='libp3dtool.dll')
-    #TargetAdd('Panda3D.app', input='libp3pystub.lib')
     TargetAdd('Panda3D.app', input='libp3tinyxml.ilb')
     TargetAdd('Panda3D.app', input='panda3d_mac.plist', ipath=OPTS)
     TargetAdd('Panda3D.app', input='models/plugin_images/panda3d.icns')
@@ -5645,18 +5622,16 @@ if (RUNTIME):
     TargetAdd('panda3dw.exe', input='libpandaexpress.dll')
     TargetAdd('panda3dw.exe', input='libp3dtoolconfig.dll')
     TargetAdd('panda3dw.exe', input='libp3dtool.dll')
-    #TargetAdd('panda3dw.exe', input='libp3pystub.lib')
     TargetAdd('panda3dw.exe', input='libp3tinyxml.ilb')
     TargetAdd('panda3dw.exe', opts=['SUBSYSTEM:WINDOWS', 'OPENSSL', 'ZLIB', 'WINGDI', 'WINUSER', 'WINSHELL', 'ADVAPI', 'WINSOCK2', 'WINOLE', 'CARBON'])
 
 if (RTDIST):
-  OPTS=['BUILDING:P3D_PLUGIN', 'DIR:direct/src/plugin_standalone', 'DIR:direct/src/plugin', 'DIR:dtool/src/dtoolbase', 'DIR:dtool/src/dtoolutil', 'DIR:dtool/src/pystub', 'DIR:dtool/src/prc', 'DIR:dtool/src/dconfig', 'DIR:panda/src/express', 'DIR:panda/src/downloader', 'RUNTIME', 'P3DEMBED', 'OPENSSL', 'ZLIB']
+  OPTS=['BUILDING:P3D_PLUGIN', 'DIR:direct/src/plugin_standalone', 'DIR:direct/src/plugin', 'DIR:dtool/src/dtoolbase', 'DIR:dtool/src/dtoolutil', 'DIR:dtool/src/prc', 'DIR:dtool/src/dconfig', 'DIR:panda/src/express', 'DIR:panda/src/downloader', 'RUNTIME', 'P3DEMBED', 'OPENSSL', 'ZLIB']
   # This is arguably a big fat ugly hack, but doing it otherwise would complicate the build process considerably.
   DefSymbol("P3DEMBED", "LINK_ALL_STATIC", "")
   TargetAdd('plugin_standalone_panda3dBase.obj', opts=OPTS, input='panda3dBase.cxx')
   TargetAdd('plugin_standalone_p3dEmbedMain.obj', opts=OPTS, input='p3dEmbedMain.cxx')
   TargetAdd('plugin_standalone_p3dEmbed.obj', opts=OPTS, input='p3dEmbed.cxx')
-  #TargetAdd('plugin_standalone_pystub.obj', opts=OPTS, input='pystub.cxx')
   TargetAdd('plugin_standalone_dtoolbase_composite1.obj', opts=OPTS, input='p3dtoolbase_composite1.cxx')
   TargetAdd('plugin_standalone_dtoolbase_composite2.obj', opts=OPTS, input='p3dtoolbase_composite2.cxx')
   TargetAdd('plugin_standalone_lookup3.obj', opts=OPTS, input='lookup3.c')
@@ -5674,7 +5649,6 @@ if (RTDIST):
   TargetAdd('p3dembed.exe', input='plugin_standalone_panda3dBase.obj')
   TargetAdd('p3dembed.exe', input='plugin_standalone_p3dEmbedMain.obj')
   TargetAdd('p3dembed.exe', input='plugin_standalone_p3dEmbed.obj')
-  #TargetAdd('p3dembed.exe', input='plugin_standalone_pystub.obj')
   TargetAdd('p3dembed.exe', input='plugin_standalone_dtoolbase_composite1.obj')
   TargetAdd('p3dembed.exe', input='plugin_standalone_dtoolbase_composite2.obj')
   TargetAdd('p3dembed.exe', input='plugin_standalone_lookup3.obj')
@@ -5704,7 +5678,6 @@ if (RTDIST):
     TargetAdd('p3dembedw.exe', input='plugin_standalone_panda3dBase.obj')
     TargetAdd('p3dembedw.exe', input='plugin_standalone_p3dEmbedWinMain.obj')
     TargetAdd('p3dembedw.exe', input='plugin_standalone_p3dEmbed.obj')
-    #TargetAdd('p3dembedw.exe', input='plugin_standalone_pystub.obj')
     TargetAdd('p3dembedw.exe', input='plugin_standalone_dtoolbase_composite1.obj')
     TargetAdd('p3dembedw.exe', input='plugin_standalone_dtoolbase_composite2.obj')
     TargetAdd('p3dembedw.exe', input='plugin_standalone_lookup3.obj')
@@ -6459,8 +6432,6 @@ for VER in MAYAVERSIONS:
     TargetAdd('mayaeggimport'+VNUM+'.mll', input='mayaeggimport'+VNUM+'_mayaeggimport.obj')
     TargetAdd('mayaeggimport'+VNUM+'.mll', input='libpandaegg.dll')
     TargetAdd('mayaeggimport'+VNUM+'.mll', input=COMMON_PANDA_LIBS)
-    #if GetTarget() == 'windows':
-    #  TargetAdd('mayaeggimport'+VNUM+'.mll', input='libp3pystub.lib')
     TargetAdd('mayaeggimport'+VNUM+'.mll', opts=['ADVAPI', VER])
 
     TargetAdd('mayaloader'+VNUM+'_config_mayaloader.obj', opts=OPTS, input='config_mayaloader.cxx')
