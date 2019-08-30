@@ -2727,6 +2727,17 @@ def choice(condition, ifTrue, ifFalse):
     else:
         return ifFalse
 
+def nonRepeatingRandomList(vals, max):
+    random.seed(time.time())
+    #first generate a set of random values
+    valueList=range(max)
+    finalVals=[]
+    for i in range(vals):
+        index=int(random.random()*len(valueList))
+        finalVals.append(valueList[index])
+        valueList.remove(valueList[index])
+    return finalVals
+
 builtins.Functor = Functor
 builtins.Stack = Stack
 builtins.Queue = Queue
