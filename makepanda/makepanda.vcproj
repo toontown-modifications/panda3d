@@ -86,7 +86,6 @@
 				<File RelativePath="..\dtool\src\parser-inc\cg.h"></File>
 				<File RelativePath="..\dtool\src\parser-inc\NxCooking.h"></File>
 				<File RelativePath="..\dtool\src\parser-inc\NxPhysics.h"></File>
-				<File RelativePath="..\dtool\src\parser-inc\libtar.h"></File>
 				<File RelativePath="..\dtool\src\parser-inc\tcp.h"></File>
 				<File RelativePath="..\dtool\src\parser-inc\NxStream.h"></File>
 				<File RelativePath="..\dtool\src\parser-inc\cv.h"></File>
@@ -2079,16 +2078,10 @@
 				<File RelativePath="..\panda\src\pnmimagetypes\colrops.c"></File>
 			</Filter>
 			<Filter Name="downloadertools">
-				<File RelativePath="..\panda\src\downloadertools\show_ddb.cxx"></File>
 				<File RelativePath="..\panda\src\downloadertools\pencrypt.cxx"></File>
-				<File RelativePath="..\panda\src\downloadertools\check_adler.cxx"></File>
 				<File RelativePath="..\panda\src\downloadertools\pdecrypt.cxx"></File>
 				<File RelativePath="..\panda\src\downloadertools\pzip.cxx"></File>
 				<File RelativePath="..\panda\src\downloadertools\multify.cxx"></File>
-				<File RelativePath="..\panda\src\downloadertools\check_md5.cxx"></File>
-				<File RelativePath="..\panda\src\downloadertools\check_crc.cxx"></File>
-				<File RelativePath="..\panda\src\downloadertools\apply_patch.cxx"></File>
-				<File RelativePath="..\panda\src\downloadertools\build_patch.cxx"></File>
 				<File RelativePath="..\panda\src\downloadertools\punzip.cxx"></File>
 			</Filter>
 			<Filter Name="gles2gsg">
