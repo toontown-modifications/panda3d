@@ -7,6 +7,12 @@ from . import Particles
 from . import ForceGroup
 
 from direct.directnotify import DirectNotifyGlobal
+import sys
+
+
+if sys.version_info < (3, 0):
+    FileNotFoundError = IOError
+
 
 class ParticleEffect(NodePath):
     notify = DirectNotifyGlobal.directNotify.newCategory('ParticleEffect')
@@ -163,49 +169,51 @@ class ParticleEffect(NodePath):
 
     def saveConfig(self, filename):
         filename = Filename(filename)
-        f = open(filename.toOsSpecific(), 'wb')
-        # Add a blank line
-        f.write('\n')
+        with open(filename.toOsSpecific(), 'w') as f:
+          # Add a blank line
+          f.write('\n')
 
-        # Make sure we start with a clean slate
-        f.write('self.reset()\n')
+          # Make sure we start with a clean slate
+          f.write('self.reset()\n')
 
-        pos = self.getPos()
-        hpr = self.getHpr()
-        scale = self.getScale()
-        f.write('self.setPos(%0.3f, %0.3f, %0.3f)\n' %
-                (pos[0], pos[1], pos[2]))
-        f.write('self.setHpr(%0.3f, %0.3f, %0.3f)\n' %
-                (hpr[0], hpr[1], hpr[2]))
-        f.write('self.setScale(%0.3f, %0.3f, %0.3f)\n' %
-                (scale[0], scale[1], scale[2]))
+          pos = self.getPos()
+          hpr = self.getHpr()
+          scale = self.getScale()
+          f.write('self.setPos(%0.3f, %0.3f, %0.3f)\n' %
+                  (pos[0], pos[1], pos[2]))
+          f.write('self.setHpr(%0.3f, %0.3f, %0.3f)\n' %
+                  (hpr[0], hpr[1], hpr[2]))
+          f.write('self.setScale(%0.3f, %0.3f, %0.3f)\n' %
+                  (scale[0], scale[1], scale[2]))
 
-        # Save all the particles to file
-        num = 0
-        for p in list(self.particlesDict.values()):
-            target = 'p%d' % num
-            num = num + 1
-            f.write(target + ' = Particles.Particles(\'%s\')\n' % p.getName())
-            p.printParams(f, target)
-            f.write('self.addParticles(%s)\n' % target)
+          # Save all the particles to file
+          num = 0
+          for p in list(self.particlesDict.values()):
+              target = 'p%d' % num
+              num = num + 1
+              f.write(target + ' = Particles.Particles(\'%s\')\n' % p.getName())
+              p.printParams(f, target)
+              f.write('self.addParticles(%s)\n' % target)
 
-        # Save all the forces to file
-        num = 0
-        for fg in list(self.forceGroupDict.values()):
-            target = 'f%d' % num
-            num = num + 1
-            f.write(target + ' = ForceGroup.ForceGroup(\'%s\')\n' % \
-                                                fg.getName())
-            fg.printParams(f, target)
-            f.write('self.addForceGroup(%s)\n' % target)
-
-        # Close the file
-        f.close()
+          # Save all the forces to file
+          num = 0
+          for fg in list(self.forceGroupDict.values()):
+              target = 'f%d' % num
+              num = num + 1
+              f.write(target + ' = ForceGroup.ForceGroup(\'%s\')\n' % \
+                                                  fg.getName())
+              fg.printParams(f, target)
+              f.write('self.addForceGroup(%s)\n' % target)
 
     def loadConfig(self, filename):
-        data = vfs.readFile(filename, 1)
-        data = data.replace(b'\r', b'')
+        fn = Filename(filename)
+        vfs = VirtualFileSystem.getGlobalPtr()
         try:
+            if not vfs.resolveFilename(fn, getModelPath().value) and not fn.isRegularFile():
+                raise FileNotFoundError("could not find particle file: %s" % (filename))
+
+            data = vfs.readFile(fn, True)
+            data = data.replace(b'\r', b'')
             exec(data)
         except:
             self.notify.warning('loadConfig: failed to load particle file: '+ repr(filename))
