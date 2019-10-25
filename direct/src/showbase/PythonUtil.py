@@ -2747,6 +2747,32 @@ if not hasattr(builtins, 'enumerate'):
 else:
     enumerate = builtins.enumerate
 
+def isClient():
+    if hasattr(builtins, 'simbase') and not hasattr(builtins, 'base'):
+        return False
+    return True
+
+def pdir(obj, str=None, width=None, fTruncate=1, lineWidth=75, wantPrivate=0):
+    uniqueLineage = []
+    for l in getClassLineage(obj):
+        if type(l) == types.ClassType:
+            if l in uniqueLineage:
+                break
+        uniqueLineage.append(l)
+
+    uniqueLineage.reverse()
+    for obj in uniqueLineage:
+        _pdir(obj, str, width, fTruncate, lineWidth, wantPrivate)
+        print
+
+def quantize(value, divisor):
+    return float(int(value * int(divisor))) / int(divisor)
+
+def quantizeVec(vec, divisor):
+    vec[0] = quantize(vec[0], divisor)
+    vec[1] = quantize(vec[1], divisor)
+    vec[2] = quantize(vec[2], divisor)
+
 builtins.Functor = Functor
 builtins.Stack = Stack
 builtins.Queue = Queue
