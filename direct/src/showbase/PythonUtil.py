@@ -2738,6 +2738,15 @@ def nonRepeatingRandomList(vals, max):
         valueList.remove(valueList[index])
     return finalVals
 
+if not hasattr(builtins, 'enumerate'):
+
+    def enumerate(L):
+        return zip(xrange(len(L)), L)
+
+    builtins.enumerate = enumerate
+else:
+    enumerate = builtins.enumerate
+
 builtins.Functor = Functor
 builtins.Stack = Stack
 builtins.Queue = Queue
