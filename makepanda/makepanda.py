@@ -4827,7 +4827,7 @@ if ((GetTarget() in ('windows', 'darwin') or PkgSkip("X11")==0) and PkgSkip("TIN
 #
 # DIRECTORY: panda/src/toontown/
 #
-if (PkgSkip("DNA")==0 and PkgSkip("PYTHON")==0 and not RUNTIME):
+if (PkgSkip("DNA")==0 and PkgSkip("PYTHON")==0):
     OPTS=['DIR:panda/src/toontown', 'BUILDING:DNA']
     TargetAdd('toontown_composite.obj', opts=OPTS, input='p3toontown_composite1.cxx')
 
