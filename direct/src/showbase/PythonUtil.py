@@ -21,7 +21,7 @@ __all__ = [
     'listToItem2index', 'formatTimeCompact', 'deeptype', 'StdoutCapture',
     'StdoutPassthrough', 'Averager', 'getRepository', 'formatTimeExact',
     'startSuperLog', 'endSuperLog', 'typeName', 'safeTypeName',
-    'histogramDict', 'unescapeHtmlString',
+    'histogramDict', 'unescapeHtmlString', 'describeException'
 ]
 
 if __debug__:
@@ -2689,6 +2689,346 @@ class PriorityCallbacks:
         for priority, callback in self._callbacks:
             callback()
 
+def recordCreationStack(cls):
+    if hasattr(cls, '__init__'):
+        raise "recordCreationStack: class '%s' must define __init__" % cls.__name__
+    cls.__moved_init__ = cls.__init__
+
+    def __recordCreationStack_init__(self, *args, **kArgs):
+        self._creationStackTrace = StackTrace(start=1)
+        return self.__moved_init__(*args, **kArgs)
+
+    def getCreationStackTrace(self):
+        return self._creationStackTrace
+
+    def getCreationStackTraceCompactStr(self):
+        return self._creationStackTrace.compact()
+
+    def printCreationStackTrace(self):
+        print(self._creationStackTrace)
+
+    cls.__init__ = __recordCreationStack_init__
+    cls.getCreationStackTrace = getCreationStackTrace
+    cls.getCreationStackTraceCompactStr = getCreationStackTraceCompactStr
+    cls.printCreationStackTrace = printCreationStackTrace
+    return cls
+
+def recordFunctorCreationStacks():
+    global Functor
+    from direct.showbase import DConfig
+    config = DConfig
+    if __dev__ and config.GetBool('record-functor-creation-stacks', 0):
+        if hasattr(Functor, '_functorCreationStacksRecorded'):
+            Functor = recordCreationStackStr(Functor)
+            Functor._functorCreationStacksRecorded = True
+            Functor.__call__ = Functor._exceptionLoggedCreationStack__call__
+
+def choice(condition, ifTrue, ifFalse):
+    if condition:
+        return ifTrue
+    else:
+        return ifFalse
+
+def nonRepeatingRandomList(vals, max):
+    random.seed(time.time())
+    #first generate a set of random values
+    valueList=range(max)
+    finalVals=[]
+    for i in range(vals):
+        index=int(random.random()*len(valueList))
+        finalVals.append(valueList[index])
+        valueList.remove(valueList[index])
+    return finalVals
+
+if not hasattr(builtins, 'enumerate'):
+
+    def enumerate(L):
+        return zip(xrange(len(L)), L)
+
+    builtins.enumerate = enumerate
+else:
+    enumerate = builtins.enumerate
+
+def isClient():
+    if hasattr(builtins, 'simbase') and not hasattr(builtins, 'base'):
+        return False
+    return True
+
+def pdir(obj, str=None, width=None, fTruncate=1, lineWidth=75, wantPrivate=0):
+    uniqueLineage = []
+    for l in getClassLineage(obj):
+        if type(l) == types.ClassType:
+            if l in uniqueLineage:
+                break
+        uniqueLineage.append(l)
+
+    uniqueLineage.reverse()
+    for obj in uniqueLineage:
+        _pdir(obj, str, width, fTruncate, lineWidth, wantPrivate)
+        print
+
+def quantize(value, divisor):
+    return float(int(value * int(divisor))) / int(divisor)
+
+def quantizeVec(vec, divisor):
+    vec[0] = quantize(vec[0], divisor)
+    vec[1] = quantize(vec[1], divisor)
+    vec[2] = quantize(vec[2], divisor)
+
+"""
+POD (Plain Ol' Data)
+
+Like ParamObj/ParamSet, but without lock/unlock/getPriorValue and without
+appliers. Similar to a C++ struct, but with auto-generated setters and
+getters.
+
+Use POD when you want the generated getters and setters of ParamObj, but
+efficiency is a concern and you don't need the bells and whistles provided
+by ParamObj.
+
+POD.__init__ *MUST* be called. You should NOT define your own data getters
+and setters. Data values may be read, set, and modified directly. You will
+see no errors if you define your own getters/setters, but there is no
+guarantee that they will be called--and they will certainly be bypassed by
+POD internally.
+
+EXAMPLE CLASSES
+===============
+Here is an example of a class heirarchy that uses POD to manage its data:
+
+class Enemy(POD):
+  DataSet = {
+    'faction': 'navy',
+    }
+
+class Sailor(Enemy):
+  DataSet = {
+    'build': HUSKY,
+    'weapon': Cutlass(scale=.9),
+    }
+
+EXAMPLE USAGE
+=============
+s = Sailor(faction='undead', build=SKINNY)
+
+# make two copies of s
+s2 = s.makeCopy()
+s3 = Sailor(s)
+
+# example sets
+s2.setWeapon(Musket())
+s3.build = TALL
+
+# example gets
+faction2 = s2.getFaction()
+faction3 = s3.faction
+"""
+class POD:
+    DataSet = {
+        # base class does not define any data items, but they would
+        # appear here as 'name': defaultValue,
+        #
+        # WARNING: default values of mutable types that do not copy by
+        # value (dicts, lists etc.) will be shared by all class instances.
+        # if default value is callable, it will be called to get actual
+        # default value
+        #
+        # for example:
+        #
+        # class MapData(POD):
+        #     DataSet = {
+        #         'spawnIndices': Functor(list, [1,5,22]),
+        #         }
+        }
+    def __init__(self, **kwArgs):
+        self.__class__._compileDefaultDataSet()
+        if __debug__:
+            # make sure all of the keyword arguments passed in
+            # are present in our data set
+            for arg in kwArgs.keys():
+                assert arg in self.getDataNames(), (
+                    "unknown argument for %s: '%s'" % (
+                    self.__class__, arg))
+        # assign each of our data items directly to self
+        for name in self.getDataNames():
+            # if a value has been passed in for a data item, use
+            # that value, otherwise use the default value
+            if name in kwArgs:
+                getSetter(self, name)(kwArgs[name])
+            else:
+                getSetter(self, name)(self.getDefaultValue(name))
+
+    def setDefaultValues(self):
+        # set all the default data values on ourself
+        for name in self.getDataNames():
+            getSetter(self, name)(self.getDefaultValue(name))
+    # this functionality used to be in the constructor, triggered by a single
+    # positional argument; that was conflicting with POD subclasses that wanted
+    # to define different behavior for themselves when given a positional
+    # constructor argument
+    def copyFrom(self, other, strict=False):
+        # if 'strict' is true, other must have a value for all of our data items
+        # otherwise we'll use the defaults
+        for name in self.getDataNames():
+            if hasattr(other, getSetterName(name, 'get')):
+                setattr(self, name, getSetter(other, name, 'get')())
+            else:
+                if strict:
+                    raise "object '%s' doesn't have value '%s'" % (other, name)
+                else:
+                    setattr(self, name, self.getDefaultValue(name))
+        # support 'p = POD.POD().copyFrom(other)' syntax
+        return self
+    def makeCopy(self):
+        # returns a duplicate of this object
+        return self.__class__().copyFrom(self)
+    def applyTo(self, obj):
+        # Apply our entire set of data to another POD
+        for name in self.getDataNames():
+            getSetter(obj, name)(getSetter(self, name, 'get')())
+    def getValue(self, name):
+        return getSetter(self, name, 'get')()
+
+    @classmethod
+    def getDataNames(cls):
+        # returns safely-mutable list of datum names
+        cls._compileDefaultDataSet()
+        return cls._DataSet.keys()
+    @classmethod
+    def getDefaultValue(cls, name):
+        cls._compileDefaultDataSet()
+        dv = cls._DataSet[name]
+        # this allows us to create a new mutable object every time we ask
+        # for its default value, i.e. if the default value is dict, this
+        # method will return a new empty dictionary object every time. This
+        # will cause problems if the intent is to store a callable object
+        # as the default value itself; we need a way to specify that the
+        # callable *is* the default value and not a default-value creation
+        # function
+        if hasattr(dv, '__call__'):
+            dv = dv()
+        return dv
+    @classmethod
+    def _compileDefaultDataSet(cls):
+        if '_DataSet' in cls.__dict__:
+            # we've already compiled the defaults for this class
+            return
+        # create setters & getters for this class
+        if 'DataSet' in cls.__dict__:
+            for name in cls.DataSet:
+                setterName = getSetterName(name)
+                if not hasattr(cls, setterName):
+                    def defaultSetter(self, value, name=name):
+                        setattr(self, name, value)
+                    cls.__dict__[setterName] = defaultSetter
+                getterName = getSetterName(name, 'get')
+                if not hasattr(cls, getterName):
+                    def defaultGetter(self, name=name):
+                        return getattr(self, name)
+                    cls.__dict__[getterName] = defaultGetter
+        # this dict will hold all of the aggregated default data values for
+        # this particular class, including values from its base classes
+        cls._DataSet = {}
+        bases = list(cls.__bases__)
+        # process in reverse of inheritance order, so that base classes listed first
+        # will take precedence over later base classes
+        bases.reverse()
+        for curBase in bases:
+            # skip multiple-inheritance base classes that do not derive from POD
+            if issubclass(curBase, POD):
+                # make sure this base has its dict of data defaults
+                curBase._compileDefaultDataSet()
+                # grab all inherited data default values
+                cls._DataSet.update(curBase._DataSet)
+        # pull in our own class' default values if any are specified
+        if 'DataSet' in cls.__dict__:
+            cls._DataSet.update(cls.DataSet)
+
+    def __repr__(self):
+        argStr = ''
+        for name in self.getDataNames():
+            argStr += '%s=%s,' % (name, repr(getSetter(self, name, 'get')()))
+        return '%s(%s)' % (self.__class__.__name__, argStr)
+
+if __debug__ and __name__ == '__main__':
+    class PODtest(POD):
+        DataSet = {
+            'foo': dict,
+            }
+    p2 = PODtest()
+    assert hasattr(p1, 'foo')
+    # make sure the getter is working
+    assert p1.getFoo() is p1.foo
+    p1.getFoo()[1] = 2
+    assert p1.foo[1] == 2
+    # make sure that each instance gets its own copy of a mutable
+    # data item
+    assert p1.foo is not p2.foo
+    assert len(p1.foo) == 1
+    assert len(p2.foo) == 0
+    # make sure the setter is working
+    p2.setFoo({10:20})
+    assert p2.foo[10] == 20
+    # make sure modifications to mutable data items don't affect other
+    # instances
+    assert p1.foo[1] == 2
+
+    class DerivedPOD(PODtest):
+        DataSet = {
+            'bar': list,
+            }
+    d1 = DerivedPOD()
+    # make sure that derived instances get their own copy of mutable
+    # data items
+    assert hasattr(d1, 'foo')
+    assert len(d1.foo) == 0
+    # make sure derived instances get their own items
+    assert hasattr(d1, 'bar')
+    assert len(d1.bar) == 0
+
+def describeException(backTrace=4):
+
+    def byteOffsetToLineno(code, byte):
+        import array
+        lnotab = array.array('B', code.co_lnotab)
+        line = code.co_firstlineno
+        for i in range(0, len(lnotab), 2):
+            byte -= lnotab[i]
+            if byte <= 0:
+                return line
+            line += lnotab[(i + 1)]
+
+        return line
+
+    infoArr = sys.exc_info()
+    exception = infoArr[0]
+    exceptionName = getattr(exception, '__name__', None)
+    extraInfo = infoArr[1]
+    trace = infoArr[2]
+    stack = []
+    while trace.tb_next:
+        frame = trace.tb_frame
+        module = frame.f_globals.get('__name__', None)
+        lineno = byteOffsetToLineno(frame.f_code, frame.f_lasti)
+        stack.append('%s:%s, ' % (module, lineno))
+        trace = trace.tb_next
+
+    frame = trace.tb_frame
+    module = frame.f_globals.get('__name__', None)
+    lineno = byteOffsetToLineno(frame.f_code, frame.f_lasti)
+    stack.append('%s:%s, ' % (module, lineno))
+    description = ''
+    for i in range(len(stack) - 1, max(len(stack) - backTrace, 0) - 1, -1):
+        description += stack[i]
+
+    description += '%s: %s' % (exceptionName, extraInfo)
+    return description
+
+def triglerp(v0, v1, t):
+    x = lerp(-math.pi / 2, math.pi / 2, t)
+    v = math.sin(x)
+    return lerp(v0, v1, (v + 1.0) / 2.0)
+
 builtins.Functor = Functor
 builtins.Stack = Stack
 builtins.Queue = Queue
@@ -2739,3 +3079,4 @@ builtins.configIsToday = configIsToday
 builtins.typeName = typeName
 builtins.safeTypeName = safeTypeName
 builtins.histogramDict = histogramDict
+builtins.choice = choice

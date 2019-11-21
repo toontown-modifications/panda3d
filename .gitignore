@@ -3,6 +3,7 @@
 /thirdparty/
 /targetroot/
 /dstroot/
+*.zip
 
 # Core dumps and traces
 core
