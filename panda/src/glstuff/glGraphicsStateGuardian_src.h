@@ -92,6 +92,7 @@ typedef void (APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
 typedef void (APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
 typedef void (APIENTRYP PFNGLBUFFERSUBDATAPROC) (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data);
 typedef void (APIENTRYP PFNGLDRAWBUFFERSPROC) (GLsizei n, const GLenum *bufs);
+typedef void (APIENTRYP PFNGLREADBUFFERPROC) (GLenum src);
 typedef void (APIENTRYP PFNGLCLEARBUFFERFVPROC) (GLenum buffer, GLint drawbuffer, const GLfloat *value);
 typedef void (APIENTRYP PFNGLBUFFERDATAPROC) (GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
 typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
@@ -185,6 +186,7 @@ typedef void (APIENTRYP PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei coun
 typedef void (APIENTRYP PFNGLVALIDATEPROGRAMPROC) (GLuint program);
 typedef void (APIENTRYP PFNGLVERTEXATTRIB4FVPROC) (GLuint index, const GLfloat *v);
 typedef void (APIENTRYP PFNGLVERTEXATTRIB4DVPROC) (GLuint index, const GLdouble *v);
+typedef void (APIENTRYP PFNGLVERTEXATTRIBI4UIPROC) (GLuint index, GLuint x, GLuint y, GLuint z, GLuint w);
 typedef void (APIENTRYP PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 typedef void (APIENTRYP PFNGLVERTEXATTRIBIPOINTERPROC) (GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 typedef void (APIENTRYP PFNGLVERTEXATTRIBLPOINTERPROC) (GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
@@ -814,6 +816,7 @@ public:
   PFNGLGETCOMPRESSEDTEXIMAGEPROC _glGetCompressedTexImage;
 
   bool _supports_bgr;
+  bool _supports_bgra_read;
   bool _supports_packed_dabc;
   bool _supports_packed_ufloat;
 
@@ -939,6 +942,10 @@ public:
   PFNGLBLITFRAMEBUFFEREXTPROC _glBlitFramebuffer;
   PFNGLDRAWBUFFERSPROC _glDrawBuffers;
 
+#if defined(OPENGLES) && !defined(OPENGLES_1)
+  PFNGLREADBUFFERPROC _glReadBuffer;
+#endif
+
 #ifndef OPENGLES_1
   PFNGLCLEARBUFFERFVPROC _glClearBufferfv;
   PFNGLCLEARBUFFERIVPROC _glClearBufferiv;
@@ -1009,6 +1016,7 @@ public:
   PFNGLVALIDATEPROGRAMPROC _glValidateProgram;
   PFNGLVERTEXATTRIB4FVPROC _glVertexAttrib4fv;
   PFNGLVERTEXATTRIB4DVPROC _glVertexAttrib4dv;
+  PFNGLVERTEXATTRIBI4UIPROC _glVertexAttribI4ui;
   PFNGLVERTEXATTRIBPOINTERPROC _glVertexAttribPointer;
   PFNGLVERTEXATTRIBIPOINTERPROC _glVertexAttribIPointer;
   PFNGLVERTEXATTRIBLPOINTERPROC _glVertexAttribLPointer;

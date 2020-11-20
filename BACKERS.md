@@ -15,7 +15,6 @@ This is a list of all the people who are contributing financially to Panda3D.  I
 * [Mitchell Stokes](https://opencollective.com/mitchell-stokes)
 * [Daniel Stokes](https://opencollective.com/daniel-stokes)
 * [David Rose](https://opencollective.com/david-rose)
-* [Carnetsoft](https://cs-driving-simulator.com/)
 
 ## Benefactors
 
@@ -26,9 +25,11 @@ This is a list of all the people who are contributing financially to Panda3D.  I
 
 ## Enthusiasts
 
-![Benefactors](https://opencollective.com/panda3d/tiers/enthusiast.svg?avatarHeight=48&width=600)
+![Enthusiasts](https://opencollective.com/panda3d/tiers/enthusiast.svg?avatarHeight=48&width=600)
 
 * Eric Thomson
+* Kyle Roach
+* Brian Lach
 
 ## Backers
 

@@ -19,12 +19,13 @@ import random
 import importlib
 
 try:
-    import signal
+    import _signal as signal
 except ImportError:
     signal = None
 
 from panda3d.core import *
 from direct.extensions_native import HTTPChannel_extensions
+
 
 def print_exc_plus():
     """
@@ -592,9 +593,7 @@ class TaskManager:
         else:
             function = method
         if (function == oldMethod):
-            newMethod = types.MethodType(newFunction,
-                                         method.__self__,
-                                         method.__self__.__class__)
+            newMethod = types.MethodType(newFunction, method.__self__)
             task.setFunction(newMethod)
             # Found a match
             return 1

@@ -113,6 +113,7 @@ PUBLISHED:
   // Miles.  Both interfaces exist because of a significant difference in the
   // two APIs.  Hopefully the difference can be reconciled into a single
   // interface at some point.
+
   virtual PN_stdfloat get_speaker_mix(int speaker);
   virtual void set_speaker_mix(PN_stdfloat frontleft, PN_stdfloat frontright, PN_stdfloat center, PN_stdfloat sub, PN_stdfloat backleft, PN_stdfloat backright, PN_stdfloat sideleft, PN_stdfloat  sideright);
 

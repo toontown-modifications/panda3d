@@ -170,6 +170,7 @@ static const string default_vshader =
   "out vec2 texcoord;\n"
   "out vec4 color;\n"
 #else
+  "#version 100\n"
   "precision mediump float;\n"
   "attribute vec4 p3d_Vertex;\n"
   "attribute vec4 p3d_Color;\n"
@@ -240,6 +241,7 @@ static const string default_fshader =
   "uniform sampler2D p3d_Texture0;\n"
   "uniform vec4 p3d_TexAlphaOnly;\n"
 #else
+  "#version 100\n"
   "precision mediump float;\n"
   "varying vec2 texcoord;\n"
   "varying lowp vec4 color;\n"
@@ -606,10 +608,10 @@ reset() {
   GraphicsStateGuardian::reset();
 
   // Build _inv_state_mask as a mask of 1's where we don't care, and 0's where
-  // we do care, about the state.  _inv_state_mask =
-  // RenderState::SlotMask::all_on();
+  // we do care, about the state.
+#ifndef OPENGLES_1
   _inv_state_mask.clear_bit(ShaderAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(AlphaTestAttrib::get_class_slot());
+#endif
   _inv_state_mask.clear_bit(AntialiasAttrib::get_class_slot());
   _inv_state_mask.clear_bit(ClipPlaneAttrib::get_class_slot());
   _inv_state_mask.clear_bit(ColorAttrib::get_class_slot());
@@ -619,20 +621,29 @@ reset() {
   _inv_state_mask.clear_bit(DepthTestAttrib::get_class_slot());
   _inv_state_mask.clear_bit(DepthWriteAttrib::get_class_slot());
   _inv_state_mask.clear_bit(RenderModeAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(RescaleNormalAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(ShadeModelAttrib::get_class_slot());
   _inv_state_mask.clear_bit(TransparencyAttrib::get_class_slot());
   _inv_state_mask.clear_bit(ColorWriteAttrib::get_class_slot());
   _inv_state_mask.clear_bit(ColorBlendAttrib::get_class_slot());
+#if !defined(OPENGLES) || defined(OPENGLES_1)
   _inv_state_mask.clear_bit(LogicOpAttrib::get_class_slot());
+#endif
   _inv_state_mask.clear_bit(TextureAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(TexGenAttrib::get_class_slot());
   _inv_state_mask.clear_bit(TexMatrixAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(MaterialAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(LightAttrib::get_class_slot());
   _inv_state_mask.clear_bit(StencilAttrib::get_class_slot());
-  _inv_state_mask.clear_bit(FogAttrib::get_class_slot());
   _inv_state_mask.clear_bit(ScissorAttrib::get_class_slot());
+
+  // We only care about this state if we are using the fixed-function pipeline.
+#ifdef SUPPORT_FIXED_FUNCTION
+  if (has_fixed_function_pipeline()) {
+    _inv_state_mask.clear_bit(AlphaTestAttrib::get_class_slot());
+    _inv_state_mask.clear_bit(RescaleNormalAttrib::get_class_slot());
+    _inv_state_mask.clear_bit(ShadeModelAttrib::get_class_slot());
+    _inv_state_mask.clear_bit(TexGenAttrib::get_class_slot());
+    _inv_state_mask.clear_bit(MaterialAttrib::get_class_slot());
+    _inv_state_mask.clear_bit(LightAttrib::get_class_slot());
+    _inv_state_mask.clear_bit(FogAttrib::get_class_slot());
+  }
+#endif
 
   // Output the vendor and version strings.
   query_gl_version();
@@ -1304,10 +1315,12 @@ reset() {
   // Note that these extensions only offer support for GL_BGRA, not GL_BGR.
   _supports_bgr = has_extension("GL_EXT_texture_format_BGRA8888") ||
                   has_extension("GL_APPLE_texture_format_BGRA8888");
+  _supports_bgra_read = has_extension("GL_EXT_read_format_bgra");
 #else
   // In regular OpenGL, we have both GL_BGRA and GL_BGR.
   _supports_bgr =
     is_at_least_gl_version(1, 2) || has_extension("GL_EXT_bgra");
+  _supports_bgra_read = _supports_bgr;
 #endif
 
 #ifdef SUPPORT_FIXED_FUNCTION
@@ -1776,9 +1789,9 @@ reset() {
         _shader_caps._active_gprofile = (int)CG_PROFILE_GLSLG;
       }
     }
-    _shader_caps._ultimate_vprofile = (int)CG_PROFILE_VP40;
-    _shader_caps._ultimate_fprofile = (int)CG_PROFILE_FP40;
-    _shader_caps._ultimate_gprofile = (int)CG_PROFILE_GPU_GP;
+    _shader_caps._ultimate_vprofile = (int)CG_PROFILE_GLSLV;
+    _shader_caps._ultimate_fprofile = (int)CG_PROFILE_GLSLF;
+    _shader_caps._ultimate_gprofile = (int)CG_PROFILE_GLSLG;
 
     // Bug workaround for radeons.
     if (_shader_caps._active_fprofile == CG_PROFILE_ARBFP1) {
@@ -1907,6 +1920,8 @@ reset() {
          get_extension_func("glUniform3uiv");
       _glUniform4uiv = (PFNGLUNIFORM4UIVPROC)
          get_extension_func("glUniform4uiv");
+      _glVertexAttribI4ui = (PFNGLVERTEXATTRIBI4UIPROC)
+         get_extension_func("glVertexAttribI4ui");
 
     } else if (has_extension("GL_EXT_gpu_shader4")) {
       _glBindFragDataLocation = (PFNGLBINDFRAGDATALOCATIONPROC)
@@ -1921,10 +1936,13 @@ reset() {
          get_extension_func("glUniform3uivEXT");
       _glUniform4uiv = (PFNGLUNIFORM4UIVPROC)
          get_extension_func("glUniform4uivEXT");
+      _glVertexAttribI4ui = (PFNGLVERTEXATTRIBI4UIPROC)
+         get_extension_func("glVertexAttribI4uiEXT");
 
     } else {
       _glBindFragDataLocation = nullptr;
       _glVertexAttribIPointer = nullptr;
+      _glVertexAttribI4ui = nullptr;
     }
     if (is_at_least_gl_version(4, 1) ||
         has_extension("GL_ARB_vertex_attrib_64bit")) {
@@ -1953,8 +1971,11 @@ reset() {
        get_extension_func("glVertexAttribPointerARB");
 
     _glBindFragDataLocation = nullptr;
+    _glVertexAttribI4ui = nullptr;
     _glVertexAttribIPointer = nullptr;
     _glVertexAttribLPointer = nullptr;
+  } else {
+    _glVertexAttribI4ui = nullptr;
   }
 #endif
 
@@ -2001,8 +2022,11 @@ reset() {
   if (is_at_least_gles_version(3, 0)) {
     _glVertexAttribIPointer = (PFNGLVERTEXATTRIBIPOINTERPROC)
       get_extension_func("glVertexAttribIPointer");
+    _glVertexAttribI4ui = (PFNGLVERTEXATTRIBI4UIPROC)
+      get_extension_func("glVertexAttribI4ui");
   } else {
     _glVertexAttribIPointer = nullptr;
+    _glVertexAttribI4ui = nullptr;
   }
 
   if (has_extension("GL_EXT_blend_func_extended")) {
@@ -2520,6 +2544,20 @@ reset() {
 
   } else {
     _glDrawBuffers = nullptr;
+  }
+#endif
+
+#if defined(OPENGLES) && !defined(OPENGLES_1)
+  if (is_at_least_gles_version(3, 0)) {
+    _glReadBuffer = (PFNGLREADBUFFERPROC)
+      get_extension_func("glReadBuffer");
+
+  } else if (has_extension("GL_NV_read_buffer")) {
+    _glReadBuffer = (PFNGLREADBUFFERPROC)
+      get_extension_func("glReadBufferNV");
+
+  } else {
+    _glReadBuffer = nullptr;
   }
 #endif
 
@@ -3976,12 +4014,6 @@ prepare_lens() {
   }
 #endif
 
-#ifndef OPENGLES_1
-  if (_current_shader_context) {
-    _current_shader_context->issue_parameters(Shader::SSD_transform);
-  }
-#endif
-
   return true;
 }
 
@@ -4134,6 +4166,7 @@ end_frame(Thread *current_thread) {
     _current_shader = nullptr;
     _current_shader_context = nullptr;
   }
+  _state_shader = nullptr;
 #endif
 
   // Respecify the active texture next frame, for good measure.
@@ -6206,7 +6239,7 @@ release_geom(GeomContext *gc) {
  */
 ShaderContext *CLP(GraphicsStateGuardian)::
 prepare_shader(Shader *se) {
-  PStatGPUTimer timer(this, _prepare_shader_pcollector);
+  PStatGPUTimer timer(this, se->get_prepare_shader_pcollector());
 
 #ifndef OPENGLES_1
   ShaderContext *result = nullptr;
@@ -6214,7 +6247,9 @@ prepare_shader(Shader *se) {
   switch (se->get_language()) {
   case Shader::SL_GLSL:
     if (_supports_glsl) {
+      push_group_marker(std::string("Prepare Shader ") + se->get_debug_name());
       result = new CLP(ShaderContext)(this, se);
+      pop_group_marker();
       break;
     } else {
       GLCAT.error()
@@ -6225,7 +6260,9 @@ prepare_shader(Shader *se) {
   case Shader::SL_Cg:
 #if defined(HAVE_CG) && !defined(OPENGLES)
     if (_supports_basic_shaders) {
+      push_group_marker(std::string("Prepare Shader ") + se->get_debug_name());
       result = new CLP(CgShaderContext)(this, se);
+      pop_group_marker();
       break;
     } else {
       GLCAT.error()
@@ -7399,6 +7436,12 @@ framebuffer_copy_to_ram(Texture *tex, int view, int z,
 
   GLenum external_format = get_external_image_format(tex);
 
+  // OpenGL ES implementations may support BGRA, but that doesn't imply they
+  // also support it for glReadPixels specifically.
+  if (!_supports_bgra_read && external_format == GL_BGRA) {
+    external_format = GL_RGBA;
+  }
+
   if (GLCAT.is_spam()) {
     GLCAT.spam()
       << "glReadPixels(" << xo << ", " << yo << ", " << w << ", " << h << ", ";
@@ -8470,6 +8513,10 @@ make_shadow_buffer(LightLensNode *light, Texture *tex, GraphicsOutput *host) {
     flags |= GraphicsPipe::BF_size_square;
   }
 
+  if (host != nullptr) {
+    host = host->get_host();
+  }
+
   CLP(GraphicsBuffer) *sbuffer = new CLP(GraphicsBuffer)(get_engine(), get_pipe(), light->get_name(), fbp, props, flags, this, host);
   sbuffer->add_render_texture(tex, GraphicsOutput::RTM_bind_or_copy, GraphicsOutput::RTP_depth);
   get_engine()->add_window(sbuffer, light->get_shadow_buffer_sort());
@@ -8956,7 +9003,7 @@ do_get_extension_func(const char *) {
  */
 void CLP(GraphicsStateGuardian)::
 set_draw_buffer(int rbtype) {
-#ifndef OPENGLES  // Draw buffers not supported by OpenGL ES. (TODO!)
+#ifndef OPENGLES_1  // Draw buffers not supported by OpenGL ES 1.
   if (_current_fbo) {
     GLuint buffers[16];
     int nbuffers = 0;
@@ -8991,9 +9038,14 @@ set_draw_buffer(int rbtype) {
       }
       ++index;
     }
-    _glDrawBuffers(nbuffers, buffers);
+    if (_glDrawBuffers != nullptr) {
+      _glDrawBuffers(nbuffers, buffers);
+    } else {
+      nassertv(nbuffers == 1 && buffers[0] == GL_COLOR_ATTACHMENT0_EXT);
+    }
 
   } else {
+#ifndef OPENGLES
     switch (rbtype & RenderBuffer::T_color) {
     case RenderBuffer::T_front:
       glDrawBuffer(GL_FRONT);
@@ -9034,8 +9086,9 @@ set_draw_buffer(int rbtype) {
     default:
       break;
     }
-  }
 #endif  // OPENGLES
+  }
+#endif  // OPENGLES_1
 
   // Also ensure that any global color channels are masked out.
   set_color_write_mask(_color_write_mask);
@@ -9050,7 +9103,7 @@ set_draw_buffer(int rbtype) {
  */
 void CLP(GraphicsStateGuardian)::
 set_read_buffer(int rbtype) {
-#ifndef OPENGLES  // Draw buffers not supported by OpenGL ES. (TODO!)
+#ifndef OPENGLES_1  // Draw buffers not supported by OpenGL ES 1.
   if (rbtype & (RenderBuffer::T_depth | RenderBuffer::T_stencil)) {
     // Special case: don't have to call ReadBuffer for these.
     return;
@@ -9083,10 +9136,14 @@ set_read_buffer(int rbtype) {
       }
       ++index;
     }
+#ifdef OPENGLES
+    _glReadBuffer(buffer);
+#else
     glReadBuffer(buffer);
+#endif
 
   } else {
-
+#ifndef OPENGLES
     switch (rbtype & RenderBuffer::T_color) {
     case RenderBuffer::T_front:
       glReadBuffer(GL_FRONT);
@@ -9123,10 +9180,11 @@ set_read_buffer(int rbtype) {
     default:
       break;
     }
+#endif  // OPENGLES
   }
 
   report_my_gl_errors();
-#endif  // OPENGLES
+#endif  // OPENGLES_1
 }
 
 /**
@@ -10470,11 +10528,9 @@ get_internal_image_format(Texture *tex, bool force_sized) const {
 
 #ifndef OPENGLES_1
   case Texture::F_srgb:
-#ifndef OPENGLES
-    return GL_SRGB8;
-#endif
+    return _supports_texture_srgb ? GL_SRGB8 : GL_RGB8;
   case Texture::F_srgb_alpha:
-    return GL_SRGB8_ALPHA8;
+    return _supports_texture_srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8;
 #endif
 #ifndef OPENGLES
   case Texture::F_sluminance:
@@ -11356,7 +11412,8 @@ set_state_and_transform(const RenderState *target,
   _state_pcollector.add_level(1);
   PStatGPUTimer timer1(this, _draw_set_state_pcollector);
 
-  if (transform != _internal_transform) {
+  bool transform_changed = transform != _internal_transform;
+  if (transform_changed) {
     // PStatGPUTimer timer(this, _draw_set_state_transform_pcollector);
     _transform_state_pcollector.add_level(1);
     _internal_transform = transform;
@@ -11364,6 +11421,16 @@ set_state_and_transform(const RenderState *target,
   }
 
   if (target == _state_rs && (_state_mask | _inv_state_mask).is_all_on()) {
+#ifndef OPENGLES_1
+    if (transform_changed) {
+      // The state has not changed, but the transform has. Set the new
+      // transform on the shader, if we have one.
+      if (_current_shader_context != nullptr) {
+        _current_shader_context->set_state_and_transform(_state_rs, transform,
+          _scene_setup->get_camera_transform(), _projection_mat);
+      }
+    }
+#endif
     return;
   }
   _target_rs = target;
@@ -11376,10 +11443,12 @@ set_state_and_transform(const RenderState *target,
     do_issue_shader();
     _state_shader = _target_shader;
     _state_mask.clear_bit(TextureAttrib::get_class_slot());
+    _state_mask.set_bit(ShaderAttrib::get_class_slot());
   }
   else if (!has_fixed_function_pipeline() && _current_shader == nullptr) { // In the case of OpenGL ES 2.x, we need to glUseShader before we draw anything.
     do_issue_shader();
     _state_mask.clear_bit(TextureAttrib::get_class_slot());
+    _state_mask.set_bit(ShaderAttrib::get_class_slot());
   }
 
   // Update all of the state that is bound to the shader program.
@@ -12963,11 +13032,20 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
     int num_levels = 1;
     CPTA_uchar image = tex->get_ram_mipmap_image(mipmap_bias);
 
+    bool can_generate = _supports_generate_mipmap;
+#if defined(OPENGLES) && !defined(OPENGLES_1)
+    // OpenGL ES doesn't support generating mipmaps for sRGB textures, so we
+    // have to do this on the CPU, unless we have a special extension.
+    if (internal_format == GL_SRGB8 || internal_format == GL_SRGB8_ALPHA8) {
+      can_generate = has_extension("GL_NV_generate_mipmap_sRGB");
+    }
+#endif
+
     if (image.is_null()) {
       // We don't even have a RAM image, so we have no choice but to let
       // mipmaps be generated on the GPU.
       if (uses_mipmaps) {
-        if (_supports_generate_mipmap) {
+        if (can_generate) {
           num_levels = tex->get_expected_num_mipmap_levels() - mipmap_bias;
           gtc->_generate_mipmaps = true;
         } else {
@@ -12983,7 +13061,7 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
 
         if (num_levels <= 1) {
           // No RAM mipmap levels available.  Should we generate some?
-          if (!_supports_generate_mipmap || !driver_generate_mipmaps ||
+          if (!can_generate || !driver_generate_mipmaps ||
               image_compression != Texture::CM_off) {
             // Yes, the GL can't or won't generate them, so we need to.  Note
             // that some drivers (nVidia) will *corrupt memory* if you ask
@@ -12996,7 +13074,7 @@ upload_texture(CLP(TextureContext) *gtc, bool force, bool uses_mipmaps) {
         if (num_levels <= 1) {
           // We don't have mipmap levels in RAM.  Ask the GL to generate them
           // if it can.
-          if (_supports_generate_mipmap) {
+          if (can_generate) {
             num_levels = tex->get_expected_num_mipmap_levels() - mipmap_bias;
             gtc->_generate_mipmaps = true;
           } else {
@@ -14262,9 +14340,7 @@ do_extract_texture_data(CLP(TextureContext) *gtc) {
 
 #ifndef OPENGLES_1
   case GL_SRGB:
-#ifndef OPENGLES
   case GL_SRGB8:
-#endif
     format = Texture::F_srgb;
     break;
   case GL_SRGB_ALPHA:

@@ -104,10 +104,13 @@ RenameSet methodRenameDictionary[] = {
   { "operator >>="  , "__irshift__",            1 },
   { "operator typecast bool", "__nonzero__",    0 },
   { "__nonzero__"   , "__nonzero__",            0 },
+  { "__int__"       , "__int__",                0 },
   { "__reduce__"    , "__reduce__",             0 },
   { "__reduce_persist__", "__reduce_persist__", 0 },
   { "__copy__"      , "__copy__",               0 },
   { "__deepcopy__"  , "__deepcopy__",           0 },
+  { "__getstate__"  , "__getstate__",           0 },
+  { "__setstate__"  , "__setstate__",           0 },
   { "print"         , "Cprint",                 0 },
   { "CInterval.set_t", "_priv__cSetT",          0 },
   { nullptr, nullptr, -1 }
@@ -554,6 +557,12 @@ get_slotted_function_def(Object *obj, Function *func, FunctionRemap *remap,
     // nb_bool.
     def._answer_location = "nb_bool";
     def._wrapper_type = WT_inquiry;
+    return true;
+  }
+
+  if (method_name == "__int__") {
+    def._answer_location = "nb_int";
+    def._wrapper_type = WT_no_params;
     return true;
   }
 
@@ -2585,6 +2594,8 @@ write_module_class(ostream &out, Object *obj) {
     out << "    return nullptr;\n";
     out << "  }\n\n";
 
+    bool have_eq = false;
+    bool have_ne = false;
     for (Function *func : obj->_methods) {
       std::set<FunctionRemap*> remaps;
       if (!func) {
@@ -2605,8 +2616,10 @@ write_module_class(ostream &out, Object *obj) {
         op_type = "Py_LE";
       } else if (fname == "operator ==") {
         op_type = "Py_EQ";
+        have_eq = true;
       } else if (fname == "operator !=") {
         op_type = "Py_NE";
+        have_ne = true;
       } else if (fname == "operator >") {
         op_type = "Py_GT";
       } else if (fname == "operator >=") {
@@ -2631,6 +2644,43 @@ write_module_class(ostream &out, Object *obj) {
     }
 
     if (has_local_richcompare) {
+      if (have_eq && !have_ne) {
+        // Generate a not-equal function from the equal function.
+        for (Function *func : obj->_methods) {
+          std::set<FunctionRemap*> remaps;
+          if (!func) {
+            continue;
+          }
+          const string &fname = func->_ifunc.get_name();
+          if (fname != "operator ==") {
+            continue;
+          }
+          for (FunctionRemap *remap : func->_remaps) {
+            if (is_remap_legal(remap) && remap->_has_this && (remap->_args_type == AT_single_arg)) {
+              remaps.insert(remap);
+            }
+          }
+          out << "  case Py_NE: // from Py_EQ\n";
+          out << "    {\n";
+
+          string expected_params;
+          write_function_forset(out, remaps, 1, 1, expected_params, 6, true, false,
+                                AT_single_arg, RF_pyobject | RF_invert_bool | RF_err_null, false);
+
+          out << "      break;\n";
+          out << "    }\n";
+        }
+      }
+      else if (!have_eq && !slots.count("tp_compare")) {
+        // Generate an equals function.
+        out << "  case Py_EQ:\n";
+        out << "    return PyBool_FromLong(DtoolInstance_Check(arg) && DtoolInstance_VOID_PTR(self) == DtoolInstance_VOID_PTR(arg));\n";
+        if (!have_ne) {
+          out << "  case Py_NE:\n";
+          out << "    return PyBool_FromLong(!DtoolInstance_Check(arg) || DtoolInstance_VOID_PTR(self) != DtoolInstance_VOID_PTR(arg));\n";
+        }
+      }
+
       // End of switch block
       out << "  }\n\n";
       out << "  if (_PyErr_OCCURRED()) {\n";
@@ -3588,17 +3638,28 @@ write_function_for_name(ostream &out, Object *obj,
     std::string cClassName = obj->_itype.get_true_name();
     // string class_name = remap->_cpptype->get_simple_name();
 
-    // Extract pointer from 'self' parameter.
-    out << "  " << cClassName << " *local_this = nullptr;\n";
-
-    if (all_nonconst) {
+    // If this is a non-static __setstate__, we run the default constructor.
+    if (remap->_cppfunc->get_local_name() == "__setstate__") {
+      out << "  if (DtoolInstance_VOID_PTR(self) != nullptr) {\n"
+          << "    Dtool_Raise_TypeError(\"C++ object is already constructed.\");\n";
+      error_return(out, 4, return_flags);
+      out << "  }\n"
+          << "  " << cClassName << " *local_this = new " << cClassName << ";\n"
+          << "  DTool_PyInit_Finalize(self, local_this, &Dtool_" << ClassName
+          << ", false, false);\n"
+          << "  if (local_this == nullptr) {\n"
+          << "    PyErr_NoMemory();\n";
+    }
+    else if (all_nonconst) {
       // All remaps are non-const.  Also check that this object isn't const.
-      out << "  if (!Dtool_Call_ExtractThisPointer_NonConst(self, Dtool_" << ClassName << ", "
+      out << "  " << cClassName << " *local_this = nullptr;\n"
+          << "  if (!Dtool_Call_ExtractThisPointer_NonConst(self, Dtool_" << ClassName << ", "
           << "(void **)&local_this, \"" << classNameFromCppName(cClassName, false)
           << "." << methodNameFromCppName(remap, cClassName, false) << "\")) {\n";
-
-    } else {
-      out << "  if (!DtoolInstance_GetPointer(self, local_this, Dtool_" << ClassName << ")) {\n";
+    }
+    else {
+      out << "  " << cClassName << " *local_this = nullptr;\n"
+          << "  if (!DtoolInstance_GetPointer(self, local_this, Dtool_" << ClassName << ")) {\n";
     }
 
     error_return(out, 4, return_flags);
@@ -6062,8 +6123,13 @@ write_function_instance(ostream &out, FunctionRemap *remap,
       return_flags &= ~RF_pyobject;
 
     } else if (return_null && TypeManager::is_bool(remap->_return_type->get_new_type())) {
-      indent(out, indent_level)
-        << "return Dtool_Return_Bool(" << return_expr << ");\n";
+      if (return_flags & RF_invert_bool) {
+        indent(out, indent_level)
+          << "return Dtool_Return_Bool(!(" << return_expr << "));\n";
+      } else {
+        indent(out, indent_level)
+          << "return Dtool_Return_Bool(" << return_expr << ");\n";
+      }
       return_flags &= ~RF_pyobject;
 
     } else if (return_null && TypeManager::is_pointer_to_PyObject(remap->_return_type->get_new_type())) {
@@ -6418,9 +6484,14 @@ pack_return_value(ostream &out, int indent_level, FunctionRemap *remap,
       TypeManager::is_vector_unsigned_char(type)) {
     // Most types are now handled by the many overloads of Dtool_WrapValue,
     // defined in py_panda.h.
-    indent(out, indent_level)
-      << "return Dtool_WrapValue(" << return_expr << ");\n";
-
+    if (return_flags & RF_invert_bool) {
+      indent(out, indent_level)
+        << "return Dtool_WrapValue(!(" << return_expr << "));\n";
+    }
+    else {
+      indent(out, indent_level)
+        << "return Dtool_WrapValue(" << return_expr << ");\n";
+    }
   } else if (TypeManager::is_pointer(type)) {
     bool is_const = TypeManager::is_const_pointer_to_anything(type);
     bool owns_memory = remap->_return_value_needs_management;
@@ -6547,7 +6618,9 @@ write_make_seq(ostream &out, Object *obj, const std::string &ClassName,
     "\n";
 
   if ((elem_getter->_args_type & AT_varargs) == AT_varargs) {
+    out << "#if defined(Py_TRACE_REFS) || PY_VERSION_HEX < 0x03090000\n";
     out << "  _Py_ForgetReference((PyObject *)&args);\n";
+    out << "#endif\n";
   }
 
   out <<
@@ -8026,6 +8099,10 @@ output_quoted(ostream &out, int indent_level, const std::string &str,
       indent(out, indent_level)
         << '"';
       continue;
+
+    case '\t':
+      out << "\\t";
+      break;
 
     default:
       if (!isprint(*si)) {
