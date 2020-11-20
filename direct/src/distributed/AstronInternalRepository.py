@@ -1,14 +1,14 @@
 from panda3d.core import *
 from panda3d.direct import DCPacker
-from MsgTypes import *
+from .MsgTypes import *
 from direct.showbase import ShowBase # __builtin__.config
 from direct.task.TaskManagerGlobal import * # taskMgr
 from direct.directnotify import DirectNotifyGlobal
-from ConnectionRepository import ConnectionRepository
-from PyDatagram import PyDatagram
-from PyDatagramIterator import PyDatagramIterator
-from AstronDatabaseInterface import AstronDatabaseInterface
-from NetMessenger import NetMessenger
+from .ConnectionRepository import ConnectionRepository
+from .PyDatagram import PyDatagram
+from .PyDatagramIterator import PyDatagramIterator
+from .AstronDatabaseInterface import AstronDatabaseInterface
+from .NetMessenger import NetMessenger
 import collections
 
 # Helper functions for logging output:
@@ -34,7 +34,7 @@ def msgpack_encode(dg, element):
         dg.addUint8(0xc2)
     elif element is True:
         dg.addUint8(0xc3)
-    elif isinstance(element, (int, long)):
+    elif isinstance(element, int):
         if -32 <= element < 128:
             dg.addInt8(element)
         elif 128 <= element < 256:
@@ -65,14 +65,14 @@ def msgpack_encode(dg, element):
             raise ValueError('int out of range for msgpack: %d' % element)
     elif isinstance(element, dict):
         msgpack_length(dg, len(element), 0x80, 0x10, None, 0xde, 0xdf)
-        for k,v in element.items():
+        for k,v in list(element.items()):
             msgpack_encode(dg, k)
             msgpack_encode(dg, v)
     elif isinstance(element, list):
         msgpack_length(dg, len(element), 0x90, 0x10, None, 0xdc, 0xdd)
         for v in element:
             msgpack_encode(dg, v)
-    elif isinstance(element, basestring):
+    elif isinstance(element, str):
         # 0xd9 is str 8 in all recent versions of the MsgPack spec, but somehow
         # Logstash bundles a MsgPack implementation SO OLD that this isn't
         # handled correctly so this function avoids it too
@@ -408,7 +408,7 @@ class AstronInternalRepository(ConnectionRepository):
         unpacker.setUnpackData(di.getRemainingBytes())
 
         # Required:
-        for i in xrange(dclass.getNumInheritedFields()):
+        for i in range(dclass.getNumInheritedFields()):
             field = dclass.getInheritedField(i)
             if not field.isRequired() or field.asMolecularField(): continue
             unpacker.beginUnpack(field)
@@ -417,7 +417,7 @@ class AstronInternalRepository(ConnectionRepository):
 
         # Other:
         other = unpacker.rawUnpackUint16()
-        for i in xrange(other):
+        for i in range(other):
             field = dclass.getFieldByIndex(unpacker.rawUnpackUint16())
             unpacker.beginUnpack(field)
             fields[field.getName()] = field.unpackArgs(unpacker)
@@ -499,7 +499,7 @@ class AstronInternalRepository(ConnectionRepository):
         fieldPacker = DCPacker()
         fieldCount = 0
         if dclass and fields:
-            for k,v in fields.items():
+            for k,v in list(fields.items()):
                 field = dclass.getFieldByName(k)
                 if not field:
                     self.notify.error('Activation request for %s object contains '

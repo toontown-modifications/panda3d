@@ -1,9 +1,9 @@
 from panda3d.direct import DCPacker
-from MsgTypes import *
+from .MsgTypes import *
 from direct.directnotify import DirectNotifyGlobal
-from ConnectionRepository import ConnectionRepository
-from PyDatagram import PyDatagram
-from PyDatagramIterator import PyDatagramIterator
+from .ConnectionRepository import ConnectionRepository
+from .PyDatagram import PyDatagram
+from .PyDatagramIterator import PyDatagramIterator
 
 class AstronDatabaseInterface:
     """
@@ -39,7 +39,7 @@ class AstronDatabaseInterface:
         # Pack up/count valid fields.
         fieldPacker = DCPacker()
         fieldCount = 0
-        for k,v in fields.items():
+        for k,v in list(fields.items()):
             field = dclass.getFieldByName(k)
             if not field:
                 self.notify.error('Creation request for %s object contains '
@@ -149,7 +149,7 @@ class AstronDatabaseInterface:
             unpacker = DCPacker()
             unpacker.setUnpackData(di.getRemainingBytes())
             fields = {}
-            for x in xrange(fieldCount):
+            for x in range(fieldCount):
                 fieldId = unpacker.rawUnpackInt16()
                 field = dclass.getFieldByIndex(fieldId)
 
@@ -197,7 +197,7 @@ class AstronDatabaseInterface:
 
         fieldPacker = DCPacker()
         fieldCount = 0
-        for k,v in newFields.items():
+        for k,v in list(newFields.items()):
             field = dclass.getFieldByName(k)
             if not field:
                 self.notify.error('Update for %s(%d) object contains invalid'
@@ -276,7 +276,7 @@ class AstronDatabaseInterface:
             unpacker = DCPacker()
             unpacker.setUnpackData(di.getRemainingBytes())
             fields = {}
-            for x in xrange(fieldCount):
+            for x in range(fieldCount):
                 fieldId = unpacker.rawUnpackInt16()
                 field = self.air.getDcFile().getFieldByIndex(fieldId)
 
