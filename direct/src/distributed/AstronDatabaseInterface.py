@@ -57,7 +57,7 @@ class AstronDatabaseInterface:
         dg.addUint32(ctx)
         dg.addUint16(dclass.getNumber())
         dg.addUint16(fieldCount)
-        dg.appendData(fieldPacker.getString())
+        dg.appendData(fieldPacker.getBytes())
         self.air.send(dg)
 
     def handleCreateObjectResp(self, di):
@@ -239,7 +239,7 @@ class AstronDatabaseInterface:
         dg.addUint32(doId)
         if fieldCount != 1:
             dg.addUint16(fieldCount)
-        dg.appendData(fieldPacker.getString())
+        dg.appendData(fieldPacker.getBytes())
         self.air.send(dg)
 
         if oldFields is None and callback is not None:

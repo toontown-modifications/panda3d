@@ -72,12 +72,14 @@ def msgpack_encode(dg, element):
         msgpack_length(dg, len(element), 0x90, 0x10, None, 0xdc, 0xdd)
         for v in element:
             msgpack_encode(dg, v)
-    elif isinstance(element, str):
+    elif isinstance(element, bytes):
         # 0xd9 is str 8 in all recent versions of the MsgPack spec, but somehow
         # Logstash bundles a MsgPack implementation SO OLD that this isn't
         # handled correctly so this function avoids it too
         msgpack_length(dg, len(element), 0xa0, 0x20, None, 0xda, 0xdb)
         dg.appendData(element)
+    elif isinstance(element, str):
+        msgpack_encode(dg, element.encode())
     elif isinstance(element, float):
         # Python does not distinguish between floats and doubles, so we send
         # everything as a double in MsgPack:
@@ -207,7 +209,7 @@ class AstronInternalRepository(ConnectionRepository):
         dg2 = PyDatagram()
         dg2.addServerControlHeader(CONTROL_ADD_POST_REMOVE)
         dg2.addUint64(self.ourChannel)
-        dg2.addString(dg.getMessage())
+        dg2.addBlob(dg.getMessage())
         self.send(dg2)
 
     def clearPostRemove(self):
@@ -522,7 +524,7 @@ class AstronInternalRepository(ConnectionRepository):
             dg.addServerHeader(doId, self.ourChannel, STATESERVER_OBJECT_SET_FIELDS)
             dg.addUint32(doId)
             dg.addUint16(fieldCount)
-            dg.appendData(fieldPacker.getString())
+            dg.appendData(fieldPacker.getBytes())
             self.send(dg)
             # Now slide it into the zone we expect to see it in (so it
             # generates onto us with all of the fields in place)
