@@ -543,7 +543,7 @@ open_stream() {
   _video_timebase = av_q2d(stream->time_base);
   _min_fseek = (int)(3.0 / _video_timebase);
 
-  AVCodec *pVideoCodec = nullptr;
+  const AVCodec *pVideoCodec = nullptr;
   if (ffmpeg_prefer_libvpx) {
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 0, 0)
     if (codecpar->codec_id == AV_CODEC_ID_VP9) {
@@ -616,7 +616,7 @@ close_stream() {
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 52, 0)
     avcodec_free_context(&_video_ctx);
 #else
-    delete _video_ctx;
+    av_free(_video_ctx);
 #endif
   }
   _video_ctx = nullptr;

@@ -1,37 +1,8 @@
 from math import floor, ceil
 
 from panda3d.core import Vec2, Vec3, Vec4, Vec4F, Vec4D
+from panda3d import core
 import pytest
-
-
-def test_round():
-    original_vector = Vec4(2.3, -2.6, 3.5, 1)
-
-    rounded_vector = round(original_vector)
-    assert rounded_vector.x == 2
-    assert rounded_vector.y == -3
-    assert rounded_vector.z == 4
-    assert rounded_vector.w == 1
-
-
-def test_floor():
-    original_vector = Vec4(2.3, -2.6, 3.5, 1)
-
-    rounded_vector = floor(original_vector)
-    assert rounded_vector.x == 2
-    assert rounded_vector.y == -3
-    assert rounded_vector.z == 3
-    assert rounded_vector.w == 1
-
-
-def test_ceil():
-    original_vector = Vec4(2.3, -2.6, 3.5, 1)
-
-    rounded_vector = ceil(original_vector)
-    assert rounded_vector.x == 3
-    assert rounded_vector.y == -2
-    assert rounded_vector.z == 4
-    assert rounded_vector.w == 1
 
 
 def test_vec4_creation():
@@ -118,3 +89,52 @@ def test_vec4_compare():
     assert Vec4(0, 0, 0, 1).compare_to(Vec4(0, 1, 0, 0)) == -1
     assert Vec4(0, 0, 0, 1).compare_to(Vec4(0, 0, 1, 0)) == -1
     assert Vec4(0, 0, 0, 1).compare_to(Vec4(0, 0, 0, 1)) == 0
+
+
+def test_vec4_round():
+    original_vector = Vec4(2.3, -2.6, 3.5, 1)
+
+    rounded_vector = round(original_vector)
+    assert rounded_vector.x == 2
+    assert rounded_vector.y == -3
+    assert rounded_vector.z == 4
+    assert rounded_vector.w == 1
+
+
+def test_vec4_floor():
+    original_vector = Vec4(2.3, -2.6, 3.5, 1)
+
+    rounded_vector = floor(original_vector)
+    assert rounded_vector.x == 2
+    assert rounded_vector.y == -3
+    assert rounded_vector.z == 3
+    assert rounded_vector.w == 1
+
+
+def test_vec4_ceil():
+    original_vector = Vec4(2.3, -2.6, 3.5, 1)
+
+    rounded_vector = ceil(original_vector)
+    assert rounded_vector.x == 3
+    assert rounded_vector.y == -2
+    assert rounded_vector.z == 4
+    assert rounded_vector.w == 1
+
+
+@pytest.mark.parametrize("type", (core.LVecBase4f, core.LVecBase4d, core.LVecBase4i))
+def test_vec4_floordiv(type):
+    with pytest.raises(ZeroDivisionError):
+        type(1, 2, 3, 4) // 0
+
+    for i in range(-11, 11):
+        for j in range(1, 11):
+            assert (type(i) // j).x == i // j
+            assert (type(i) // -j).x == i // -j
+
+            v = type(i)
+            v //= j
+            assert v.x == i // j
+
+            v = type(i)
+            v //= -j
+            assert v.x == i // -j
