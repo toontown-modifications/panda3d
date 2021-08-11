@@ -3204,14 +3204,10 @@ if not PkgSkip("BULLET"):
 if not PkgSkip("SPEEDTREE"):
     CopyAllHeaders('contrib/src/speedtree')
 
-<<<<<<< HEAD
 if (PkgSkip("DNA")==0):
     CopyAllHeaders('panda/src/toontown')
 
 if (PkgSkip("DIRECT")==0):
-=======
-if not PkgSkip("DIRECT"):
->>>>>>> upstream/master
     CopyAllHeaders('direct/src/directbase')
     CopyAllHeaders('direct/src/dcparser')
     CopyAllHeaders('direct/src/deadrec')
@@ -5083,53 +5079,6 @@ if not PkgSkip("DIRECT"):
 # DIRECTORY: direct/metalibs/direct/
 #
 
-<<<<<<< HEAD
-if (PkgSkip("DIRECT")==0):
-  TargetAdd('libp3direct.dll', input='p3directbase_directbase.obj')
-  TargetAdd('libp3direct.dll', input='p3dcparser_composite1.obj')
-  TargetAdd('libp3direct.dll', input='p3dcparser_composite2.obj')
-  TargetAdd('libp3direct.dll', input='p3dcparser_dcParser.obj')
-  TargetAdd('libp3direct.dll', input='p3dcparser_dcLexer.obj')
-  TargetAdd('libp3direct.dll', input='p3showbase_showBase.obj')
-  if GetTarget() == 'darwin':
-    TargetAdd('libp3direct.dll', input='p3showbase_showBase_assist.obj')
-  TargetAdd('libp3direct.dll', input='p3deadrec_composite1.obj')
-  TargetAdd('libp3direct.dll', input='p3distributed_config_distributed.obj')
-  TargetAdd('libp3direct.dll', input='p3interval_composite1.obj')
-  TargetAdd('libp3direct.dll', input='p3motiontrail_config_motiontrail.obj')
-  TargetAdd('libp3direct.dll', input='p3motiontrail_cMotionTrail.obj')
-  TargetAdd('libp3direct.dll', input=COMMON_PANDA_LIBS)
-  TargetAdd('libp3direct.dll', opts=['ADVAPI', 'WINUSER', 'WINGDI'])
-
-  PyTargetAdd('direct_module.obj', input='libp3dcparser.in')
-  PyTargetAdd('direct_module.obj', input='libp3showbase.in')
-  PyTargetAdd('direct_module.obj', input='libp3deadrec.in')
-  PyTargetAdd('direct_module.obj', input='libp3interval.in')
-  PyTargetAdd('direct_module.obj', input='libp3distributed.in')
-  PyTargetAdd('direct_module.obj', input='libp3motiontrail.in')
-
-  PyTargetAdd('direct_module.obj', opts=['IMOD:panda3d.direct', 'ILIB:direct', 'IMPORT:panda3d.core'])
-
-  PyTargetAdd('direct.pyd', input='libp3dcparser_igate.obj')
-  PyTargetAdd('direct.pyd', input='libp3showbase_igate.obj')
-  PyTargetAdd('direct.pyd', input='libp3deadrec_igate.obj')
-  PyTargetAdd('direct.pyd', input='libp3interval_igate.obj')
-  PyTargetAdd('direct.pyd', input='libp3distributed_igate.obj')
-  PyTargetAdd('direct.pyd', input='libp3motiontrail_igate.obj')
-
-  # These are part of direct.pyd, not libp3direct.dll, because they rely on
-  # the Python libraries.  If a C++ user needs these modules, we can move them
-  # back and filter out the Python-specific code.
-  PyTargetAdd('direct.pyd', input='p3dcparser_ext_composite.obj')
-  PyTargetAdd('direct.pyd', input='p3distributed_cConnectionRepository.obj')
-  PyTargetAdd('direct.pyd', input='p3distributed_cDistributedSmoothNodeBase.obj')
-
-  PyTargetAdd('direct.pyd', input='direct_module.obj')
-  PyTargetAdd('direct.pyd', input='libp3direct.dll')
-  PyTargetAdd('direct.pyd', input='libp3interrogatedb.dll')
-  PyTargetAdd('direct.pyd', input=COMMON_PANDA_LIBS)
-  PyTargetAdd('direct.pyd', opts=['WINUSER', 'WINGDI', 'WINSOCK2'])
-=======
 if not PkgSkip("DIRECT"):
     TargetAdd('libp3direct.dll', input='p3directbase_directbase.obj')
     TargetAdd('libp3direct.dll', input='p3dcparser_composite1.obj')
@@ -5175,7 +5124,6 @@ if not PkgSkip("DIRECT"):
     PyTargetAdd('direct.pyd', input='libp3interrogatedb.dll')
     PyTargetAdd('direct.pyd', input=COMMON_PANDA_LIBS)
     PyTargetAdd('direct.pyd', opts=['WINUSER', 'WINGDI', 'WINSOCK2'])
->>>>>>> upstream/master
 
 #
 # DIRECTORY: direct/src/dcparse/
