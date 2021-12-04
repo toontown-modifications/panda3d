@@ -13,6 +13,7 @@ vgcore.*
 *.core
 *.trace
 
+
 # Editor files/directories
 *.save
 *.save.1
@@ -71,3 +72,6 @@ __pycache__/
 /.settings/
 /.cproject
 /.project
+
+# stinky
+.idea
