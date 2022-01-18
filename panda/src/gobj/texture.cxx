@@ -1146,7 +1146,7 @@ set_ram_image_as(CPTA_uchar image, const string &supplied_format) {
       return;
     }
     for (int p = 0; p < imgsize; ++p) {
-      for (uchar s = 0; s < format.size(); ++s) {
+      for (unsigned char s = 0; s < format.size(); ++s) {
         signed char component = -1;
         if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
           component = 0;
@@ -1178,7 +1178,7 @@ set_ram_image_as(CPTA_uchar image, const string &supplied_format) {
     return;
   }
   for (int p = 0; p < imgsize; ++p) {
-    for (uchar s = 0; s < format.size(); ++s) {
+    for (unsigned char s = 0; s < format.size(); ++s) {
       signed char component = -1;
       if (format.at(s) == 'B' || (cdata->_num_components <= 2 && format.at(s) != 'A')) {
         component = 0;
@@ -3680,6 +3680,12 @@ do_read_txo_file(CData *cdata, const Filename &fullpath) {
   }
 
   istream *in = file->open_read_file(true);
+  if (in == nullptr) {
+    gobj_cat.error()
+      << "Failed to open " << filename << " for reading.\n";
+    return false;
+  }
+
   bool success = do_read_txo(cdata, *in, fullpath);
   vfs->close_read_file(in);
 
@@ -3735,6 +3741,12 @@ do_read_dds_file(CData *cdata, const Filename &fullpath, bool header_only) {
   }
 
   istream *in = file->open_read_file(true);
+  if (in == nullptr) {
+    gobj_cat.error()
+      << "Failed to open " << filename << " for reading.\n";
+    return false;
+  }
+
   bool success = do_read_dds(cdata, *in, fullpath, header_only);
   vfs->close_read_file(in);
 
@@ -4415,6 +4427,12 @@ do_read_ktx_file(CData *cdata, const Filename &fullpath, bool header_only) {
   }
 
   istream *in = file->open_read_file(true);
+  if (in == nullptr) {
+    gobj_cat.error()
+      << "Failed to open " << filename << " for reading.\n";
+    return false;
+  }
+
   bool success = do_read_ktx(cdata, *in, fullpath, header_only);
   vfs->close_read_file(in);
 
@@ -8023,7 +8041,7 @@ convert_from_pnmimage(PTA_uchar &image, size_t page_size,
       for (int j = y_size-1; j >= 0; j--) {
         const xel *row = array + j * x_size;
         for (int i = 0; i < x_size; i++) {
-          *p++ = (uchar)PPM_GETB(row[i]);
+          *p++ = (unsigned char)PPM_GETB(row[i]);
         }
         p += row_skip;
       }
@@ -8036,8 +8054,8 @@ convert_from_pnmimage(PTA_uchar &image, size_t page_size,
           const xel *row = array + j * x_size;
           const xelval *alpha_row = alpha + j * x_size;
           for (int i = 0; i < x_size; i++) {
-            *p++ = (uchar)PPM_GETB(row[i]);
-            *p++ = (uchar)alpha_row[i];
+            *p++ = (unsigned char)PPM_GETB(row[i]);
+            *p++ = (unsigned char)alpha_row[i];
           }
           p += row_skip;
         }
@@ -8045,8 +8063,8 @@ convert_from_pnmimage(PTA_uchar &image, size_t page_size,
         for (int j = y_size-1; j >= 0; j--) {
           const xel *row = array + j * x_size;
           for (int i = 0; i < x_size; i++) {
-            *p++ = (uchar)PPM_GETB(row[i]);
-            *p++ = (uchar)255;
+            *p++ = (unsigned char)PPM_GETB(row[i]);
+            *p++ = (unsigned char)255;
           }
           p += row_skip;
         }
@@ -8057,9 +8075,9 @@ convert_from_pnmimage(PTA_uchar &image, size_t page_size,
       for (int j = y_size-1; j >= 0; j--) {
         const xel *row = array + j * x_size;
         for (int i = 0; i < x_size; i++) {
-          *p++ = (uchar)PPM_GETB(row[i]);
-          *p++ = (uchar)PPM_GETG(row[i]);
-          *p++ = (uchar)PPM_GETR(row[i]);
+          *p++ = (unsigned char)PPM_GETB(row[i]);
+          *p++ = (unsigned char)PPM_GETG(row[i]);
+          *p++ = (unsigned char)PPM_GETR(row[i]);
         }
         p += row_skip;
       }
@@ -8072,10 +8090,10 @@ convert_from_pnmimage(PTA_uchar &image, size_t page_size,
           const xel *row = array + j * x_size;
           const xelval *alpha_row = alpha + j * x_size;
           for (int i = 0; i < x_size; i++) {
-            *p++ = (uchar)PPM_GETB(row[i]);
-            *p++ = (uchar)PPM_GETG(row[i]);
-            *p++ = (uchar)PPM_GETR(row[i]);
-            *p++ = (uchar)alpha_row[i];
+            *p++ = (unsigned char)PPM_GETB(row[i]);
+            *p++ = (unsigned char)PPM_GETG(row[i]);
+            *p++ = (unsigned char)PPM_GETR(row[i]);
+            *p++ = (unsigned char)alpha_row[i];
           }
           p += row_skip;
         }
@@ -8083,10 +8101,10 @@ convert_from_pnmimage(PTA_uchar &image, size_t page_size,
         for (int j = y_size-1; j >= 0; j--) {
           const xel *row = array + j * x_size;
           for (int i = 0; i < x_size; i++) {
-            *p++ = (uchar)PPM_GETB(row[i]);
-            *p++ = (uchar)PPM_GETG(row[i]);
-            *p++ = (uchar)PPM_GETR(row[i]);
-            *p++ = (uchar)255;
+            *p++ = (unsigned char)PPM_GETB(row[i]);
+            *p++ = (unsigned char)PPM_GETG(row[i]);
+            *p++ = (unsigned char)PPM_GETR(row[i]);
+            *p++ = (unsigned char)255;
           }
           p += row_skip;
         }
