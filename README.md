@@ -124,7 +124,8 @@ sudo apt-get install build-essential pkg-config fakeroot python3-dev libpng-dev 
 If you are on Arch Linux, this command should cover the most frequently
 used third-party packages:
 ```bash 
-yay -S xorg-server xterm libgl python openssl libjpeg libpng freetype2 gtk2 libtiff nvidia-cg-toolkit openal zlib libxxf86dga assimp bullet eigen ffmpeg fmodex libxcursor libxrandr git opencv libgles libegl ode-python-bindings
+yay -S xorg-server xterm libgl python openssl libjpeg libpng freetype2 gtk2 libtiff nvidia-cg-toolkit openal zlib libxxf86dga assimp bullet eigen ffmpeg fmodex libxcursor libxrandr git opencv libgles libegl
+pacman -S ode
 ````
 
 Once Panda3D has built, you can either install the .deb or .rpm package that
