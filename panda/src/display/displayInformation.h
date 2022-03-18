@@ -14,6 +14,7 @@
 #ifndef DISPLAYINFORMATION_H
 #define DISPLAYINFORMATION_H
 
+#include "typedef.h"
 #include "graphicsStateGuardian.h"
 
 struct EXPCL_PANDA_DISPLAY DisplayMode {

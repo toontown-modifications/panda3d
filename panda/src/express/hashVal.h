@@ -15,6 +15,7 @@
 #define HASHVAL_H
 
 #include "pandabase.h"
+#include "typedef.h"
 #include "pnotify.h"
 #include "ramfile.h"
 #include "datagram.h"

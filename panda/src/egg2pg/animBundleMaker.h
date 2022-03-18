@@ -15,7 +15,7 @@
 #define ANIMBUNDLEMAKER_H
 
 #include "pandabase.h"
-#include "numeric_types.h"
+#include "typedef.h"
 
 class EggNode;
 class EggGroupNode;

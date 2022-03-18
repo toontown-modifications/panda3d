@@ -16,6 +16,8 @@
 
 #include "pandabase.h"
 
+#include "typedef.h"
+
 BEGIN_PUBLISH
 
 enum CoordinateSystem {

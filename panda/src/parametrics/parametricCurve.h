@@ -19,6 +19,7 @@
 #include "pandaNode.h"
 #include "luse.h"
 
+#include "typedef.h"
 #include "plist.h"
 #include "pvector.h"
 

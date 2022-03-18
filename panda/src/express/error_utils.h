@@ -15,6 +15,7 @@
 #define ERROR_UTILS_H
 
 #include "pandabase.h"
+#include "typedef.h"
 
 BEGIN_PUBLISH
 

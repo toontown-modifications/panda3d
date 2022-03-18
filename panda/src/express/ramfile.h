@@ -15,6 +15,7 @@
 #define RAMFILE_H
 
 #include "pandabase.h"
+#include "typedef.h"
 #include "referenceCount.h"
 #include "extension.h"
 

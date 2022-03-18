@@ -16,6 +16,7 @@
 
 #include "pandabase.h"
 #include "parserDefs.h"
+#include "typedef.h"
 
 #include <string>
 
