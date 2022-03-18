@@ -1,9 +1,3 @@
-# TTSH-IEP Panda3D
-
-This is a custom Panda3D made to work with School House. This was based on [the Toontown Offline Panda3D.](https://github.com/rocketprogrammer/ttoffline-panda3d)
-
-The rest of the readme is the original Panda3D readme.
-
 [![Build Status](https://github.com/panda3d/panda3d/workflows/Continuous%20Integration/badge.svg?branch=master)](https://github.com/panda3d/panda3d/actions?query=branch%3Amaster+workflow%3A%22Continuous+Integration%22)
 [![OpenCollective](https://opencollective.com/panda3d/backers/badge.svg)](https://opencollective.com/panda3d)
 [![OpenCollective](https://opencollective.com/panda3d/sponsors/badge.svg)](https://opencollective.com/panda3d)
@@ -123,7 +117,7 @@ sudo apt-get install build-essential pkg-config fakeroot python3-dev libpng-dev 
 ```
 If you are on Arch Linux, this command should cover the most frequently
 used third-party packages:
-```bash 
+```bash
 yay -S xorg-server xterm libgl python openssl libjpeg libpng freetype2 gtk2 libtiff nvidia-cg-toolkit openal zlib libxxf86dga assimp bullet eigen ffmpeg fmodex libxcursor libxrandr git opencv libgles libegl
 pacman -S ode
 ````
