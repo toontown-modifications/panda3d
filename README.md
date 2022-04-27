@@ -80,7 +80,7 @@ on your version of Visual C++; 2022 is 14.3, 2019 is 14.2, 2017 is 14.1, and
 Windows Vista, which requires the Windows 8.1 SDK.
 
 ```bash
-makepanda\makepanda.bat --everything --installer --msvc-version=14.3 --windows-sdk=10 --no-eigen --threads=2
+makepanda\makepanda.bat --everything --installer --msvc-version=14.3 --windows-sdk=10 --no-eigen --threads=4
 ```
 
 When the build succeeds, it will produce an .exe file that you can use to
@@ -106,7 +106,7 @@ for you to install, depending on your distribution).
 The following command illustrates how to build Panda3D with some common
 options:
 ```bash
-python3 makepanda/makepanda.py --everything --installer --no-egl --no-gles --no-gles2 --no-opencv
+python3 makepanda/makepanda.py --everything --installer --no-egl --no-gles --no-gles2 --no-opencv --threads=4
 ```
 
 You will probably see some warnings saying that it's unable to find several
@@ -154,7 +154,7 @@ After placing the thirdparty directory inside the panda3d source directory,
 you may build Panda3D using a command like the following:
 
 ```bash
-python makepanda/makepanda.py --everything --installer
+python3 makepanda/makepanda.py --everything --installer --threads=4
 ```
 
 You may target a specific minimum macOS version using the --osxtarget flag
@@ -180,7 +180,7 @@ Install the appropriate package for it (such as `python37` or `python38`) and
 run the makepanda script with your chosen Python version:
 
 ```bash
-python3.7 makepanda/makepanda.py --everything --installer --no-egl --no-gles --no-gles2
+python3.7 makepanda/makepanda.py --everything --installer --no-egl --no-gles --no-gles2 --threads=4
 ```
 
 If successful, this will produce a .pkg file in the root of the source
@@ -204,7 +204,7 @@ pkg install python ndk-sysroot clang bison freetype harfbuzz libpng eigen openal
 Then, you can build the .apk using this command:
 
 ```bash
-python makepanda/makepanda.py --everything --target android-21 --no-tiff --installer
+python makepanda/makepanda.py --everything --target android-21 --no-tiff --installer --threads=2
 ```
 
 You can install the generated panda3d.apk by browsing to the panda3d folder
