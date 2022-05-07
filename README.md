@@ -52,6 +52,22 @@ builds can be obtained from [this page](https://www.panda3d.org/download.php?ver
 
 These are automatically kept up-to-date with the latest GitHub version of Panda.
 
+Panda3D Dependencies
+================
+Ubuntu:
+
+```bash
+sudo apt-get install build-essential pkg-config fakeroot python3-dev libpng-dev libjpeg-dev libtiff-dev zlib1g-dev libssl-dev libx11-dev libgl1-mesa-dev libxrandr-dev libxxf86dga-dev libxcursor-dev bison flex libfreetype6-dev libvorbis-dev libeigen3-dev libopenal-dev libode-dev libbullet-dev nvidia-cg-toolkit libgtk2.0-dev libassimp-dev libopenexr-dev
+```
+Arch Linux:
+```bash 
+yay -S xorg-server xterm libgl python openssl libjpeg libpng freetype2 gtk2 libtiff nvidia-cg-toolkit openal zlib libxxf86dga assimp bullet eigen ffmpeg fmodex libxcursor libxrandr git opencv libgles libegl
+pacman -S ode
+````
+Fedora:
+```bash
+sudo dnf install ode python  libjpeg-turbo openssl libpng freetype gtk2 libtiff zlib libXxf86dga assimp bullet eigen3 ffmpeg opencv mesa-libGL
+```
 Building Panda3D
 ================
 
