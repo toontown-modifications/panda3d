@@ -68,6 +68,14 @@ Fedora:
 ```bash
 sudo dnf install ode python  libjpeg-turbo openssl libpng freetype gtk2 libtiff zlib libXxf86dga assimp bullet eigen3 ffmpeg opencv mesa-libGL
 ```
+FreeBSD:
+```bash
+pkg install pkgconf bison png jpeg-turbo tiff freetype2 harfbuzz eigen squish openal opusfile libvorbis libX11 mesa-libs ode bullet assimp openexr
+```
+Android:
+```bash
+pkg install python ndk-sysroot clang bison freetype harfbuzz libpng eigen openal-soft opusfile libvorbis assimp libopus ecj dx patchelf aapt apksigner libcrypt openssl pkg-config
+```
 Building Panda3D
 ================
 
@@ -131,18 +139,6 @@ your build and install the respective development packages.  You may visit
 [this manual page](https://www.panda3d.org/manual/?title=Third-party_dependencies_and_license_info)
 for an overview of the various dependencies.
 
-If you are on Ubuntu, this command should cover the most frequently
-used third-party packages:
-
-```bash
-sudo apt-get install build-essential pkg-config fakeroot python3-dev libpng-dev libjpeg-dev libtiff-dev zlib1g-dev libssl-dev libx11-dev libgl1-mesa-dev libxrandr-dev libxxf86dga-dev libxcursor-dev bison flex libfreetype6-dev libvorbis-dev libeigen3-dev libopenal-dev libode-dev libbullet-dev nvidia-cg-toolkit libgtk2.0-dev libassimp-dev libopenexr-dev
-```
-If you are on Arch Linux, this command should cover the most frequently
-used third-party packages:
-```bash 
-yay -S xorg-server xterm libgl python openssl libjpeg libpng freetype2 gtk2 libtiff nvidia-cg-toolkit openal zlib libxxf86dga assimp bullet eigen ffmpeg fmodex libxcursor libxrandr git opencv libgles libegl
-pacman -S ode
-````
 
 Once Panda3D has built, you can either install the .deb or .rpm package that
 is produced, depending on which Linux distribution you are using.  For example,
@@ -184,12 +180,7 @@ FreeBSD
 -------
 
 Building on FreeBSD is very similar to building on Linux.  You will need to
-install the requisite packages using the system package manager.  To install
-the recommended set of dependencies, you can use this command:
-
-```bash
-pkg install pkgconf bison png jpeg-turbo tiff freetype2 harfbuzz eigen squish openal opusfile libvorbis libX11 mesa-libs ode bullet assimp openexr
-```
+install the requisite packages using the system package manager.
 
 You will also need to choose which version of Python you want to use.
 Install the appropriate package for it (such as `python37` or `python38`) and
@@ -210,12 +201,7 @@ Note: building on Android is very experimental and not guaranteed to work.
 You can experimentally build the Android Python runner via the [termux](https://termux.com/)
 shell.  You will need to install [Termux](https://play.google.com/store/apps/details?id=com.termux)
 and [Termux API](https://play.google.com/store/apps/details?id=com.termux.api)
-from the Play Store.  Many of the dependencies can be installed by running the
-following command in the Termux shell:
-
-```bash
-pkg install python ndk-sysroot clang bison freetype harfbuzz libpng eigen openal-soft opusfile libvorbis assimp libopus ecj dx patchelf aapt apksigner libcrypt openssl pkg-config
-```
+from the Play Store.
 
 Then, you can build the .apk using this command:
 
